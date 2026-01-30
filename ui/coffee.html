@@ -1,0 +1,551 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识咖啡 ☕ - SuiLight 知识沙龙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; }
+        .card { transition: all 0.3s; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .inspiration-card { animation: float 3s ease-in-out infinite; }
+        @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-10px); } }
+        .gradient-bg { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+        .vote-btn { transition: all 0.2s; }
+        .vote-btn:hover { transform: scale(1.1); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href="/" class="text-2xl">🧠</a>
+                <span class="font-bold text-xl text-gray-800">SuiLight 知识沙龙</span>
+            </div>
+            <div class="flex gap-4 text-sm">
+                <a href="/" class="text-gray-600 hover:text-indigo-600">🏠 首页</a>
+                <a href="/?tab=agents" class="text-gray-600 hover:text-indigo-600">🤖 思想家</a>
+                <a href="/?tab=discussions" class="text-gray-600 hover:text-indigo-600">💬 讨论</a>
+                <a href="/?tab=capsules" class="text-gray-600 hover:text-indigo-600">📦 胶囊</a>
+                <span class="text-indigo-600 font-bold">☕ 知识咖啡</span>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- 标题区 -->
+        <div class="text-center mb-12">
+            <div class="text-6xl mb-4">☕</div>
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">知识咖啡</h1>
+            <p class="text-xl text-gray-500">轻松交流 · 灵感碰撞 · 匿名讨论</p>
+        </div>
+
+        <!-- 灵感卡片区 -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span>💡</span> 今日灵感
+            </h2>
+            
+            <div id="inspiration-container" class="text-center py-8">
+                <div class="animate-pulse text-gray-400">加载灵感中...</div>
+            </div>
+            
+            <div class="flex justify-center gap-4 mt-6">
+                <button onclick="getNewInspiration()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-bold transition-all">
+                    🔄 换一个
+                </button>
+                <button onclick="showCreateInspirationModal()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-bold transition-all">
+                    ✏️ 我有灵感
+                </button>
+            </div>
+        </div>
+
+        <!-- 话题墙 -->
+        <div class="grid grid-cols-1 lg:grid-cols-3 gap-8">
+            
+            <!-- 话题列表 -->
+            <div class="lg:col-span-2">
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                            <span>📋</span> 话题墙
+                        </h2>
+                        <div class="flex gap-2">
+                            <select id="topic-category" onchange="loadTopics()" class="border rounded-lg px-3 py-2 text-sm">
+                                <option value="">全部</option>
+                                <option value="ai">🤖 AI 治理</option>
+                                <option value="learning">📚 学习</option>
+                                <option value="society">🌍 社会</option>
+                                <option value="philosophy">🤔 哲学</option>
+                            </select>
+                        </div>
+                    </div>
+                    
+                    <!-- 创建话题 -->
+                    <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                        <input type="text" id="new-topic-title" placeholder="分享一个话题..." 
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none mb-3">
+                        <textarea id="new-topic-desc" placeholder="添加描述 (可选)" 
+                            class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none mb-3" rows="2"></textarea>
+                        <button onclick="createTopic()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold transition-all">
+                            🚀 发布话题
+                        </button>
+                    </div>
+                    
+                    <!-- 话题列表 -->
+                    <div id="topics-list" class="space-y-4">
+                        <!-- 动态加载 -->
+                    </div>
+                    
+                    <div id="no-topics" class="text-center py-12 text-gray-400 hidden">
+                        <div class="text-4xl mb-4">📝</div>
+                        <p>暂无话题，来发起一个吧！</p>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- 侧边栏 -->
+            <div class="space-y-6">
+                
+                <!-- 热门话题 -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4 flex items-center gap-2">
+                        <span>🔥</span> 热门话题
+                    </h3>
+                    <div id="hot-topics" class="space-y-3">
+                        <div class="animate-pulse text-gray-400 text-sm">加载中...</div>
+                    </div>
+                </div>
+                
+                <!-- 统计 -->
+                <div class="bg-gradient-to-br from-indigo-500 to-purple-600 rounded-2xl shadow-xl p-6 text-white">
+                    <h3 class="text-lg font-bold mb-4">📊 咖啡数据</h3>
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="text-center">
+                            <div id="stat-topics" class="text-3xl font-bold">0</div>
+                            <div class="text-sm opacity-80">话题数</div>
+                        </div>
+                        <div class="text-center">
+                            <div id="stat-discussions" class="text-3xl font-bold">0</div>
+                            <div class="text-sm opacity-80">讨论数</div>
+                        </div>
+                    </div>
+                </div>
+                
+                <!-- 快速开始 -->
+                <div class="bg-white rounded-2xl shadow-xl p-6">
+                    <h3 class="text-lg font-bold text-gray-800 mb-4">🎯 快速开始</h3>
+                    <div class="space-y-3 text-sm">
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <span class="text-2xl">💡</span>
+                            <span>获取灵感卡片</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <span class="text-2xl">📋</span>
+                            <span>发起话题讨论</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <span class="text-2xl">💬</span>
+                            <span>匿名发表观点</span>
+                        </div>
+                        <div class="flex items-center gap-3 p-3 bg-gray-50 rounded-lg">
+                            <span class="text-2xl">📦</span>
+                            <span>生成知识胶囊</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <!-- 创建灵感弹窗 -->
+    <div id="create-inspiration-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50">
+        <div class="bg-white rounded-2xl p-8 max-w-md w-full mx-4">
+            <h3 class="text-xl font-bold mb-4">分享你的灵感 ✨</h3>
+            <textarea id="new-inspiration-content" placeholder="分享你的思考或问题..." 
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 outline-none mb-4" rows="4"></textarea>
+            <div class="flex justify-end gap-3">
+                <button onclick="closeCreateInspirationModal()" class="px-4 py-2 text-gray-600 hover:bg-gray-100 rounded-lg">取消</button>
+                <button onclick="createInspiration()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold">发布</button>
+            </div>
+        </div>
+    </div>
+
+    <!-- 话题详情弹窗 -->
+    <div id="topic-detail-modal" class="fixed inset-0 bg-black/50 hidden items-center justify-center z-50 overflow-y-auto py-8">
+        <div class="bg-white rounded-2xl p-8 max-w-2xl w-full mx-4">
+            <div class="flex justify-between items-start mb-6">
+                <h3 id="modal-topic-title" class="text-xl font-bold"></h3>
+                <button onclick="closeTopicDetailModal()" class="text-gray-400 hover:text-gray-600 text-2xl">&times;</button>
+            </div>
+            <p id="modal-topic-desc" class="text-gray-600 mb-6"></p>
+            
+            <!-- 发表观点 -->
+            <div class="bg-gray-50 rounded-xl p-4 mb-6">
+                <h4 class="font-bold mb-3">发表观点 (匿名)</h4>
+                <textarea id="new-opinion" placeholder="分享你的观点..." 
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 outline-none mb-3" rows="3"></textarea>
+                <div class="flex justify-between items-center">
+                    <select id="opinion-stance" class="border rounded-lg px-3 py-2 text-sm">
+                        <option value="positive">👍 赞同</option>
+                        <option value="neutral">😐 中立</option>
+                        <option value="negative">👎 反对</option>
+                    </select>
+                    <button onclick="createOpinion()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-2 rounded-lg font-bold">发布</button>
+                </div>
+            </div>
+            
+            <!-- 观点列表 -->
+            <div id="opinions-list" class="space-y-4">
+                <div class="text-center py-8 text-gray-400">暂无观点，快来发表吧！</div>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // API 基础地址
+        const API_BASE = window.location.origin;
+        let currentInspiration = null;
+        let currentTopicId = null;
+
+        // 页面加载
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInspiration();
+            loadTopics();
+            loadHotTopics();
+            loadStats();
+        });
+
+        // 加载灵感卡片
+        async function getNewInspiration() {
+            await loadInspiration();
+        }
+
+        async function loadInspiration() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/inspiration`);
+                const data = await resp.json();
+                
+                const container = document.getElementById('inspiration-container');
+                
+                if (data.data) {
+                    currentInspiration = data.data;
+                    container.innerHTML = `
+                        <div class="inspiration-card bg-gradient-to-br from-amber-50 to-orange-100 rounded-2xl p-8 max-w-2xl mx-auto">
+                            <p class="text-2xl text-gray-800 font-medium leading-relaxed">"${data.data.content}"</p>
+                            <div class="mt-6 flex justify-center gap-4">
+                                <button onclick="likeInspiration()" class="vote-btn bg-white hover:bg-green-50 text-green-600 px-4 py-2 rounded-full font-bold shadow">
+                                    👍 ${data.data.likes || 0}
+                                </button>
+                                <button onclick="useInspiration()" class="vote-btn bg-white hover:bg-indigo-50 text-indigo-600 px-4 py-2 rounded-full font-bold shadow">
+                                    📦 生成胶囊
+                                </button>
+                            </div>
+                        </div>
+                    `;
+                } else {
+                    container.innerHTML = `
+                        <div class="text-gray-400">暂无灵感，快来分享吧！</div>
+                    `;
+                }
+            } catch (e) {
+                console.error('加载灵感失败:', e);
+                document.getElementById('inspiration-container').innerHTML = `
+                    <div class="text-gray-400">加载失败，请刷新重试</div>
+                `;
+            }
+        }
+
+        // 点赞灵感
+        async function likeInspiration() {
+            if (!currentInspiration) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/coffee/inspiration/${currentInspiration.id}/like`, { method: 'POST' });
+                currentInspiration.likes = (currentInspiration.likes || 0) + 1;
+                loadInspiration();
+            } catch (e) {
+                console.error('点赞失败:', e);
+            }
+        }
+
+        // 使用灵感
+        async function useInspiration() {
+            if (!currentInspiration) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/coffee/inspiration/${currentInspiration.id}/use`, { method: 'POST' });
+                alert('灵感已保存，可用于知识沙龙讨论！');
+            } catch (e) {
+                console.error('保存失败:', e);
+            }
+        }
+
+        // 创建灵感
+        function showCreateInspirationModal() {
+            document.getElementById('create-inspiration-modal').classList.remove('hidden');
+            document.getElementById('create-inspiration-modal').classList.add('flex');
+        }
+
+        function closeCreateInspirationModal() {
+            document.getElementById('create-inspiration-modal').classList.add('hidden');
+            document.getElementById('create-inspiration-modal').classList.remove('flex');
+        }
+
+        async function createInspiration() {
+            const content = document.getElementById('new-inspiration-content').value.trim();
+            if (!content || content.length < 5) {
+                alert('灵感内容至少5个字符');
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/inspiration`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ content })
+                });
+                const data = await resp.json();
+                
+                if (data.success) {
+                    closeCreateInspirationModal();
+                    document.getElementById('new-inspiration-content').value = '';
+                    alert('灵感已发布！');
+                    loadInspiration();
+                }
+            } catch (e) {
+                console.error('发布失败:', e);
+            }
+        }
+
+        // 加载话题列表
+        async function loadTopics() {
+            const category = document.getElementById('topic-category').value;
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/topics?category=${category || ''}&limit=20`);
+                const data = await resp.json();
+                
+                const container = document.getElementById('topics-list');
+                const noTopics = document.getElementById('no-topics');
+                
+                if (data.data && data.data.topics.length > 0) {
+                    noTopics.classList.add('hidden');
+                    container.innerHTML = data.data.topics.map(topic => `
+                        <div class="card bg-gray-50 rounded-xl p-4 cursor-pointer" onclick="openTopicDetail('${topic.id}')">
+                            <div class="flex justify-between items-start">
+                                <div class="flex-1">
+                                    <h4 class="font-bold text-gray-800 mb-1">${topic.title}</h4>
+                                    <p class="text-gray-500 text-sm line-clamp-2">${topic.description || '暂无描述'}</p>
+                                </div>
+                                <div class="text-right ml-4">
+                                    <div class="text-2xl">${getCategoryEmoji(topic.category)}</div>
+                                </div>
+                            </div>
+                            <div class="flex justify-between items-center mt-3 text-sm text-gray-400">
+                                <span>${topic.vote_count || 0} 人关注</span>
+                                <span>${formatTime(topic.created_at)}</span>
+                            </div>
+                        </div>
+                    `).join('');
+                } else {
+                    noTopics.classList.remove('hidden');
+                    container.innerHTML = '';
+                }
+            } catch (e) {
+                console.error('加载话题失败:', e);
+            }
+        }
+
+        // 创建话题
+        async function createTopic() {
+            const title = document.getElementById('new-topic-title').value.trim();
+            const description = document.getElementById('new-topic-desc').value.trim();
+            
+            if (!title || title.length < 5) {
+                alert('话题标题至少5个字符');
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/topics`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ title, description })
+                });
+                const data = await resp.json();
+                
+                if (data.success) {
+                    document.getElementById('new-topic-title').value = '';
+                    document.getElementById('new-topic-desc').value = '';
+                    loadTopics();
+                    loadHotTopics();
+                    loadStats();
+                }
+            } catch (e) {
+                console.error('发布失败:', e);
+            }
+        }
+
+        // 打开话题详情
+        async function openTopicDetail(topicId) {
+            currentTopicId = topicId;
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/topics/${topicId}`);
+                const data = await resp.json();
+                
+                if (data.success) {
+                    const topic = data.data.topic;
+                    const opinions = data.data.opinions || [];
+                    
+                    document.getElementById('modal-topic-title').textContent = topic.title;
+                    document.getElementById('modal-topic-desc').textContent = topic.description || '暂无描述';
+                    
+                    const opinionsList = document.getElementById('opinions-list');
+                    if (opinions.length > 0) {
+                        opinionsList.innerHTML = opinions.map(op => `
+                            <div class="bg-gray-50 rounded-xl p-4">
+                                <div class="flex items-start gap-3">
+                                    <div class="text-2xl">${getStanceEmoji(op.stance)}</div>
+                                    <div class="flex-1">
+                                        <p class="text-gray-800">${op.content}</p>
+                                        <div class="flex items-center gap-4 mt-2 text-sm text-gray-400">
+                                            <span>👍 ${op.agree_count}</span>
+                                            <span>👎 ${op.disagree_count}</span>
+                                            <span>${formatTime(op.created_at)}</span>
+                                        </div>
+                                    </div>
+                                </div>
+                            </div>
+                        `).join('');
+                    } else {
+                        opinionsList.innerHTML = '<div class="text-center py-8 text-gray-400">暂无观点，快来发表吧！</div>';
+                    }
+                    
+                    document.getElementById('topic-detail-modal').classList.remove('hidden');
+                    document.getElementById('topic-detail-modal').classList.add('flex');
+                }
+            } catch (e) {
+                console.error('加载话题详情失败:', e);
+            }
+        }
+
+        function closeTopicDetailModal() {
+            document.getElementById('topic-detail-modal').classList.add('hidden');
+            document.getElementById('topic-detail-modal').classList.remove('flex');
+            currentTopicId = null;
+        }
+
+        // 创建观点
+        async function createOpinion() {
+            if (!currentTopicId) return;
+            
+            const content = document.getElementById('new-opinion').value.trim();
+            const stance = document.getElementById('opinion-stance').value;
+            
+            if (!content || content.length < 10) {
+                alert('观点内容至少10个字符');
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/discussions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic_id: currentTopicId,
+                        content,
+                        stance
+                    })
+                });
+                const data = await resp.json();
+                
+                if (data.success) {
+                    document.getElementById('new-opinion').value = '';
+                    openTopicDetail(currentTopicId);
+                    loadTopics();
+                }
+            } catch (e) {
+                console.error('发布失败:', e);
+            }
+        }
+
+        // 加载热门话题
+        async function loadHotTopics() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/topics?limit=5`);
+                const data = await resp.json();
+                
+                const container = document.getElementById('hot-topics');
+                
+                if (data.data && data.data.topics.length > 0) {
+                    container.innerHTML = data.data.topics.slice(0, 5).map((topic, i) => `
+                        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer" onclick="openTopicDetail('${topic.id}')">
+                            <span class="text-lg font-bold text-indigo-600">${i + 1}</span>
+                            <span class="text-sm text-gray-700 line-clamp-1">${topic.title}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-gray-400 text-sm">暂无话题</div>';
+                }
+            } catch (e) {
+                console.error('加载热门话题失败:', e);
+            }
+        }
+
+        // 加载统计
+        async function loadStats() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/stats`);
+                const data = await resp.json();
+                
+                if (data.data) {
+                    document.getElementById('stat-topics').textContent = data.data.topic_count || 0;
+                    document.getElementById('stat-discussions').textContent = data.data.opinion_count || 0;
+                }
+            } catch (e) {
+                console.error('加载统计失败:', e);
+            }
+        }
+
+        // 工具函数
+        function getCategoryEmoji(category) {
+            const emojis = {
+                'ai': '🤖',
+                'learning': '📚',
+                'society': '🌍',
+                'philosophy': '🤔',
+                'general': '💬'
+            };
+            return emojis[category] || '💬';
+        }
+
+        function getStanceEmoji(stance) {
+            const emojis = {
+                'positive': '👍',
+                'neutral': '😐',
+                'negative': '👎'
+            };
+            return emojis[stance] || '😐';
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            
+            if (diff < 60) return '刚刚';
+            if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+            return `${Math.floor(diff / 86400)}天前`;
+        }
+    </script>
+</body>
+</html>

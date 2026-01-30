@@ -30,8 +30,14 @@ from src.knowledge.discussion import (
     DiscussionManager, DiscussionPhase,
     get_great_discussions
 )
+from src.knowledge.capsule import (
+    CapsuleGenerator, CapsuleEvaluator,
+    CapsuleTemplateManager, CapsuleVersionManager,
+    CapsuleRecommender
+)
 from src.tasks import TaskManager, TaskStatus
 from src.storage import StorageManager
+from src.coffee import coffee_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1185,6 +1191,66 @@ async def get_trending_capsules(limit: int = 10):
             "count": len(capsules),
             "trending": capsules
         }
+    }
+
+
+# ============ 知识咖啡 API ============
+
+@app.get("/api/coffee/topics")
+async def list_coffee_topics(
+    status: str = None,
+    category: str = None,
+    limit: int = 20
+):
+    """列出咖啡话题"""
+    topics = coffee_manager.list_topics(status=status, category=category, limit=limit)
+    return {
+        "success": True,
+        "data": {
+            "count": len(topics),
+            "topics": [t.to_dict() for t in topics]
+        }
+    }
+
+
+@app.post("/api/coffee/topics")
+async def create_coffee_topic(
+    title: str,
+    description: str = "",
+    category: str = "general",
+    author_anon_id: str = ""
+):
+    """创建咖啡话题"""
+    topic = coffee_manager.create_topic(
+        title=title,
+        description=description,
+        category=category,
+        author_anon_id=author_anon_id
+    )
+    return {
+        "success": True,
+        "data": topic.to_dict()
+    }
+
+
+@app.get("/api/coffee/inspiration")
+async def get_inspiration(category: str = None):
+    """获取随机灵感卡片"""
+    card = coffee_manager.get_random_inspiration(category)
+    if not card:
+        return {"success": True, "data": None, "message": "暂无灵感"}
+    return {
+        "success": True,
+        "data": card.to_dict()
+    }
+
+
+@app.get("/api/coffee/stats")
+async def get_coffee_stats():
+    """获取咖啡模块统计"""
+    return {
+        "success": True,
+        "data": coffee_manager.get_stats()
     }
 
 
