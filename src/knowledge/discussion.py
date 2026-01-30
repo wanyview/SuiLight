@@ -18,8 +18,8 @@ from enum import Enum
 from collections import defaultdict
 import logging
 
-from .base import Agent, AgentRegistry, AgentMessage
-from .presets import GREAT_MINDS, create_agent_configs
+from ..agents.base import Agent, AgentRegistry, AgentMessage
+from ..agents.presets import GREAT_MINDS, create_agent_configs
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)

@@ -12,37 +12,46 @@ SuiLight Knowledge Salon - Async Task Queue
 import os
 import json
 import uuid
+import threading
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field
 from datetime import datetime
 from enum import Enum
-from celery import Celery
-from celery.result import AsyncResult
 import logging
+
+# 尝试导入 Celery
+try:
+    from celery import Celery
+    from celery.result import AsyncResult
+    HAS_CELERY = True
+except ImportError:
+    HAS_CELERY = False
+    logging.warning("Celery 未安装，使用线程池作为后备")
 
 # 配置
 REDIS_URL = os.getenv("REDIS_URL", "redis://localhost:6379/0")
 
 # Celery 应用
-celery_app = Celery(
-    "suilight",
-    broker=REDIS_URL,
-    backend=REDIS_URL,
-    include=["src.tasks"]
-)
-
-# Celery 配置
-celery_app.conf.update(
-    task_serializer="json",
-    accept_content=["json"],
-    result_serializer="json",
-    timezone="UTC",
-    enable_utc=True,
-    task_track_started=True,  # 追踪任务开始
-    task_time_limit=3600,     # 1小时超时
-    worker_prefetch_multiplier=1,
-    task_acks_late=True,
-)
+if HAS_CELERY:
+    celery_app = Celery(
+        "suilight",
+        broker=REDIS_URL,
+        backend=REDIS_URL,
+        include=["src.tasks"]
+    )
+    
+    # Celery 配置
+    celery_app.conf.update(
+        task_serializer="json",
+        accept_content=["json"],
+        result_serializer="json",
+        timezone="UTC",
+        enable_utc=True,
+        task_track_started=True,
+        task_time_limit=3600,
+        worker_prefetch_multiplier=1,
+        task_acks_late=True,
+    )
 
 
 class TaskStatus(Enum):
@@ -95,6 +104,7 @@ class TaskManager:
         self.registry = None  # Agent 注册表 (注入)
         self.discussion_manager = None  # 讨论管理器 (注入)
         
+        logger = logging.getLogger(__name__)
         logger.info("任务管理器初始化完成")
     
     def set_registry(self, registry):
@@ -330,86 +340,72 @@ class TaskManager:
 
 # ============ Celery Tasks ============
 
-@celery_app.task(bind=True)
-def create_agents_task(self, task_id: str, params: Dict):
-    """Celery: 批量创建 Agent"""
-    # 更新任务状态
-    AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 0})
-    
-    # 模拟耗时任务
-    import time
-    total = params.get("limit", 100)
-    
-    for i in range(total):
-        time.sleep(0.1)  # 模拟处理
-        AsyncResult(task_id).update_state(
-            state="RUNNING",
-            meta={"progress": int((i + 1) / total * 100)}
-        )
-    
-    return {"status": "completed", "progress": 100}
+if HAS_CELERY:
+    @celery_app.task(bind=True)
+    def create_agents_task(self, task_id: str, params: Dict):
+        """Celery: 批量创建 Agent"""
+        AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 0})
+        import time
+        total = params.get("limit", 100)
+        for i in range(total):
+            time.sleep(0.1)
+            AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": int((i + 1) / total * 100)})
+        return {"status": "completed", "progress": 100}
 
+    @celery_app.task(bind=True)
+    def run_discussion_task(self, task_id: str, params: Dict):
+        """Celery: 运行讨论"""
+        AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 0})
+        import time
+        max_rounds = params.get("max_rounds", 3)
+        for round_num in range(1, max_rounds + 1):
+            time.sleep(0.5)
+            AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": int(round_num / max_rounds * 100)})
+        return {"status": "completed", "rounds": max_rounds}
 
-@celery_app.task(bind=True)
-def run_discussion_task(self, task_id: str, params: Dict):
-    """Celery: 运行讨论"""
-    AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 0})
-    
-    import time
-    max_rounds = params.get("max_rounds", 3)
-    
-    for round_num in range(1, max_rounds + 1):
-        time.sleep(0.5)
-        AsyncResult(task_id).update_state(
-            state="RUNNING",
-            meta={"progress": int(round_num / max_rounds * 100)}
-        )
-    
-    return {"status": "completed", "rounds": max_rounds}
+    @celery_app.task(bind=True)
+    def extract_insights_task(self, task_id: str, params: Dict):
+        """Celery: 提取洞见"""
+        AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 50})
+        import time
+        time.sleep(1)
+        return {"status": "completed", "insights": []}
 
+    @celery_app.task(bind=True)
+    def chat_batch_task(self, task_id: str, params: Dict):
+        """Celery: 批量对话"""
+        AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 0})
+        import time
+        total = len(params.get("messages", []))
+        for i in range(total):
+            time.sleep(0.1)
+            AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": int((i + 1) / total * 100)})
+        return {"status": "completed", "count": total}
 
-@celery_app.task(bind=True)
-def extract_insights_task(self, task_id: str, params: Dict):
-    """Celery: 提取洞见"""
-    AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 50})
+    @celery_app.task(bind=True)
+    def generic_task(self, task_id: str, task_type: str, params: Dict):
+        """Celery: 通用任务"""
+        AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 50})
+        import time
+        time.sleep(1)
+        return {"status": "completed", "task_type": task_type, "params": params}
+else:
+    # Celery 不可用时的占位符
+    def create_agents_task(*args, **kwargs):
+        logging.warning("Celery 未安装，任务未注册")
+        return {"status": "failed", "error": "Celery not installed"}
     
-    import time
-    time.sleep(1)
+    def run_discussion_task(*args, **kwargs):
+        return {"status": "failed", "error": "Celery not installed"}
     
-    return {"status": "completed", "insights": []}
-
-
-@celery_app.task(bind=True)
-def chat_batch_task(self, task_id: str, params: Dict):
-    """Celery: 批量对话"""
-    AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 0})
+    def extract_insights_task(*args, **kwargs):
+        return {"status": "failed", "error": "Celery not installed"}
     
-    import time
-    total = len(params.get("messages", []))
+    def chat_batch_task(*args, **kwargs):
+        return {"status": "failed", "error": "Celery not installed"}
     
-    for i in range(total):
-        time.sleep(0.1)
-        AsyncResult(task_id).update_state(
-            state="RUNNING",
-            meta={"progress": int((i + 1) / total * 100)}
-        )
-    
-    return {"status": "completed", "count": total}
-
-
-@celery_app.task(bind=True)
-def generic_task(self, task_id: str, task_type: str, params: Dict):
-    """Celery: 通用任务"""
-    AsyncResult(task_id).update_state(state="RUNNING", meta={"progress": 50})
-    
-    import time
-    time.sleep(1)
-    
-    return {
-        "status": "completed",
-        "task_type": task_type,
-        "params": params
-    }
+    def generic_task(*args, **kwargs):
+        return {"status": "failed", "error": "Celery not installed"}
 
 
 # ============ 全局实例 ============

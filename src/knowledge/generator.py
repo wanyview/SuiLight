@@ -14,7 +14,7 @@ from datetime import datetime
 import logging
 from pathlib import Path
 
-from .base import Agent, AgentConfig, DATM
+from ..agents.base import Agent, AgentConfig, DATM
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
