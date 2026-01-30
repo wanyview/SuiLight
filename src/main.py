@@ -753,14 +753,66 @@ async def get_stats():
 # ============ 知识胶囊 API ============
 
 @app.get("/api/capsules")
-async def list_capsules(status: str = None):
+async def list_capsules(
+    status: str = None,
+    category: str = None,
+    min_score: float = None,
+    limit: int = 50,
+    offset: int = 0
+):
     """列出知识胶囊"""
-    # 简化的胶囊列表 (实际应从存储读取)
+    capsules = storage.list_capsules(
+        status=status,
+        category=category,
+        min_score=min_score,
+        limit=limit,
+        offset=offset
+    )
     return {
         "success": True,
         "data": {
-            "count": 0,
-            "capsules": []
+            "count": len(capsules),
+            "capsules": capsules
+        }
+    }
+
+
+@app.get("/api/capsules/latest")
+async def get_latest_capsules(limit: int = 10):
+    """获取最新胶囊"""
+    capsules = storage.get_latest_capsules(limit=limit)
+    return {
+        "success": True,
+        "data": {
+            "count": len(capsules),
+            "capsules": capsules
+        }
+    }
+
+
+@app.get("/api/capsules/top")
+async def get_top_capsules(limit: int = 10):
+    """获取高质量胶囊 (≥60分)"""
+    capsules = storage.get_top_capsules(limit=limit)
+    return {
+        "success": True,
+        "data": {
+            "count": len(capsules),
+            "capsules": capsules
+        }
+    }
+
+
+@app.get("/api/capsules/search")
+async def search_capsules(query: str, limit: int = 20):
+    """搜索胶囊 (全文检索)"""
+    capsules = storage.search_capsules(query, limit)
+    return {
+        "success": True,
+        "data": {
+            "query": query,
+            "count": len(capsules),
+            "capsules": capsules
         }
     }
 
@@ -776,6 +828,7 @@ async def generate_capsule(topic_id: str):
     3. 计算 DATM 维度评分
     4. 生成知识胶囊
     5. 评价胶囊质量
+    6. 存储到数据库
     """
     from src.knowledge.capsule import CapsuleGenerator, CapsuleEvaluator
     
@@ -810,7 +863,15 @@ async def generate_capsule(topic_id: str):
     evaluator = CapsuleEvaluator()
     evaluation = evaluator.evaluate(capsule)
     
-    # 保存到存储
+    # 准备存储数据
+    capsule_data = capsule.to_dict()
+    capsule_data["quality_score"] = capsule.quality_score
+    capsule_data["grade"] = evaluation["grade"]
+    
+    # 保存到数据库
+    capsule_id = storage.save_capsule(capsule_data)
+    
+    # 同时保存洞见
     storage.save_insight(
         topic_id=topic_id,
         agent_id="system",
@@ -819,53 +880,91 @@ async def generate_capsule(topic_id: str):
         confidence=capsule.confidence
     )
     
+    # 更新胶囊状态
+    storage.update_capsule_status(capsule_id, "published")
+    
+    # 获取完整胶囊
+    saved_capsule = storage.get_capsule(capsule_id)
+    
     return {
         "success": True,
         "data": {
-            "capsule": capsule.to_dict(),
+            "capsule": saved_capsule,
             "evaluation": evaluation
         }
     }
 
 
 @app.post("/api/capsules")
-async def create_capsule(
-    title: str,
-    insight: str,
-    topic_id: str = None
-):
+async def create_capsule(request: Request):
     """手动创建知识胶囊"""
-    from src.knowledge.capsule import KnowledgeCapsule, CapsuleGenerator
+    from src.knowledge.capsule import KnowledgeCapsule, CapsuleEvaluator
     
-    generator = CapsuleGenerator()
+    body = await request.json()
     
     capsule = KnowledgeCapsule(
-        topic_id=topic_id or "",
-        title=title,
-        insight=insight,
-        summary=insight[:100]
+        topic_id=body.get("topic_id", ""),
+        title=body.get("title", "未命名胶囊"),
+        insight=body.get("insight", ""),
+        summary=body.get("summary", body.get("insight", "")[:100]),
+        evidence=body.get("evidence", []),
+        action_items=body.get("action_items", []),
+        questions=body.get("questions", []),
+        source_agents=body.get("source_agents", []),
+        keywords=body.get("keywords", []),
+        category=body.get("category", "general")
     )
+    
+    # 评价
+    evaluator = CapsuleEvaluator()
+    evaluation = evaluator.evaluate(capsule)
+    
+    # 准备存储数据
+    capsule_data = capsule.to_dict()
+    capsule_data["quality_score"] = capsule.quality_score
+    capsule_data["grade"] = evaluation["grade"]
+    
+    # 保存
+    capsule_id = storage.save_capsule(capsule_data)
+    saved_capsule = storage.get_capsule(capsule_id)
     
     return {
         "success": True,
-        "data": capsule.to_dict()
+        "data": {
+            "capsule": saved_capsule,
+            "evaluation": evaluation
+        }
     }
 
 
 @app.get("/api/capsules/{capsule_id}")
 async def get_capsule(capsule_id: str):
     """获取胶囊详情"""
-    from src.knowledge.capsule import CapsuleEvaluator
-    
-    # 简化的胶囊获取 (实际应从存储读取)
-    evaluator = CapsuleEvaluator()
+    capsule = storage.get_capsule(capsule_id)
+    if not capsule:
+        raise HTTPException(status_code=404, detail="胶囊不存在")
     
     return {
         "success": True,
-        "data": {
-            "id": capsule_id,
-            "message": "胶囊详情接口"
-        }
+        "data": capsule
+    }
+
+
+@app.patch("/api/capsules/{capsule_id}/status")
+async def update_capsule_status(capsule_id: str, request: Request):
+    """更新胶囊状态"""
+    body = await request.json()
+    status = body.get("status", "draft")
+    
+    success = storage.update_capsule_status(capsule_id, status)
+    if not success:
+        raise HTTPException(status_code=404, detail="胶囊不存在")
+    
+    capsule = storage.get_capsule(capsule_id)
+    
+    return {
+        "success": True,
+        "data": capsule
     }
 
 

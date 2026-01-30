@@ -187,7 +187,49 @@ def capsule_section():
     | 开放问题 | 值得继续探索 |
     """)
     
-    # 示例胶囊
+    # 胶囊筛选
+    col1, col2, col3 = st.columns(3)
+    with col1:
+        status_filter = st.selectbox("状态", ["全部", "draft", "review", "published"])
+    with col2:
+        min_score = st.slider("最低质量分数", 0, 100, 0)
+    with col3:
+        st.markdown("###")
+        if st.button("🔄 刷新"):
+            st.rerun()
+    
+    # 获取胶囊列表
+    capsules = [
+        {
+            "id": "capsule_001",
+            "title": "关于「AI意识」的知识胶囊",
+            "insight": "意识可能有多重形态...",
+            "quality_score": 69,
+            "grade": "B",
+            "created_at": "2026-01-30"
+        },
+        {
+            "id": "capsule_002",
+            "title": "关于「复杂问题解决」的知识胶囊",
+            "insight": "理论指导与实践试错需要结合...",
+            "quality_score": 72,
+            "grade": "B",
+            "created_at": "2026-01-30"
+        }
+    ]
+    
+    # 显示胶囊列表
+    st.subheader(f"📋 胶囊列表 ({len(capsules)} 个)")
+    
+    for capsule in capsules:
+        with st.expander(f"📦 {capsule['title']} ({capsule['grade']})", expanded=False):
+            col_a, col_b = st.columns([3, 1])
+            with col_a:
+                st.markdown(f"**核心洞见**: {capsule['insight']}")
+            with col_b:
+                st.markdown(f"**质量分数**: {capsule['quality_score']}")
+    
+    # 示例胶囊详情
     st.subheader("📦 示例胶囊")
     with st.expander("关于「AI意识」的胶囊", expanded=True):
         st.markdown("""
@@ -204,16 +246,29 @@ def capsule_section():
         ### ✅ 可发布
         质量分数达到发布标准。
         """)
+        
+        # 维度图
+        st.markdown("### 📊 维度评分")
+        st.progress(70/100, text="Truth (真): 70%")
+        st.progress(65/100, text="Goodness (善): 65%")
+        st.progress(60/100, text="Beauty (美): 60%")
+        st.progress(80/100, text="Intelligence (灵): 80%")
     
     # 生成胶囊按钮
-    if st.button("✨ 从讨论生成胶囊"):
+    st.markdown("---")
+    if st.button("✨ 从讨论生成胶囊", type="primary"):
         with st.spinner("生成中..."):
+            import time
+            for i in range(5):
+                st.progress((i + 1) / 5 * 100)
+                time.sleep(0.3)
+            
             st.success("✅ 胶囊已生成!")
             st.json({
-                "id": "capsule_001",
-                "title": "关于「AI意识」的知识胶囊",
-                "insight": "意识可能有多重形态...",
-                "quality_score": 69,
+                "id": "capsule_new",
+                "title": "新知识胶囊",
+                "insight": "这是一个新生成的胶囊...",
+                "quality_score": 65,
                 "grade": "B"
             })
 

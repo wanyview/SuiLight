@@ -94,6 +94,43 @@ class StorageManager:
             )
         """)
         
+        # 知识胶囊表
+        cursor.execute("""
+            CREATE TABLE IF NOT EXISTS capsules (
+                id TEXT PRIMARY KEY,
+                topic_id TEXT,
+                title TEXT NOT NULL,
+                summary TEXT,
+                insight TEXT,
+                evidence TEXT,
+                action_items TEXT,
+                questions TEXT,
+                dimensions TEXT,
+                dimensions_score REAL,
+                confidence REAL,
+                quality_score REAL,
+                grade TEXT,
+                source_agents TEXT,
+                keywords TEXT,
+                category TEXT,
+                status TEXT,
+                version INTEGER DEFAULT 1,
+                parent_id TEXT,
+                created_at TEXT,
+                updated_at TEXT,
+                FOREIGN KEY (parent_id) REFERENCES capsules(id)
+            )
+        """)
+        
+        # 胶囊全文检索虚拟表
+        cursor.execute("""
+            CREATE VIRTUAL TABLE IF NOT EXISTS capsules_fts USING fts5(
+                title, insight, evidence, action_items, questions, keywords,
+                content='capsules',
+                content_rowid='rowid'
+            )
+        """)
+        
         conn.commit()
         conn.close()
         
@@ -422,14 +459,231 @@ class StorageManager:
         cursor.execute("SELECT COUNT(*) FROM agents")
         agent_count = cursor.fetchone()[0]
         
+        cursor.execute("SELECT COUNT(*) FROM capsules")
+        capsule_count = cursor.fetchone()[0]
+        
         conn.close()
         
         return {
             "chat_count": chat_count,
             "discussion_count": discussion_count,
             "insight_count": insight_count,
-            "agent_count": agent_count
+            "agent_count": agent_count,
+            "capsule_count": capsule_count
         }
+    
+    # ============ 知识胶囊 ============
+    
+    def save_capsule(self, capsule: Dict) -> str:
+        """保存知识胶囊"""
+        import uuid
+        
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        now = datetime.now().isoformat()
+        capsule_id = capsule.get("id", str(uuid.uuid4())[:8])
+        dimensions = capsule.get("dimensions", {})
+        
+        cursor.execute("""
+            INSERT INTO capsules
+            (id, topic_id, title, summary, insight, evidence, action_items, questions,
+             dimensions, dimensions_score, confidence, quality_score, grade,
+             source_agents, keywords, category, status, version, parent_id, created_at, updated_at)
+            VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+        """, (
+            capsule_id,
+            capsule.get("topic_id"),
+            capsule.get("title"),
+            capsule.get("summary"),
+            capsule.get("insight"),
+            json.dumps(capsule.get("evidence", [])),
+            json.dumps(capsule.get("action_items", [])),
+            json.dumps(capsule.get("questions", [])),
+            json.dumps(dimensions),
+            dimensions.get("total_score", 0) if dimensions else 0,
+            capsule.get("confidence", 0.5),
+            capsule.get("quality_score", 0),
+            capsule.get("grade", "C"),
+            json.dumps(capsule.get("source_agents", [])),
+            json.dumps(capsule.get("keywords", [])),
+            capsule.get("category", "general"),
+            capsule.get("status", "draft"),
+            capsule.get("version", 1),
+            capsule.get("parent_id"),
+            now,
+            now
+        ))
+        
+        # 更新 FTS 索引
+        cursor.execute("""
+            INSERT INTO capsules_fts(title, insight, evidence, action_items, questions, keywords)
+            VALUES (?, ?, ?, ?, ?, ?)
+        """, (
+            capsule.get("title", ""),
+            capsule.get("insight", ""),
+            json.dumps(capsule.get("evidence", [])),
+            json.dumps(capsule.get("action_items", [])),
+            json.dumps(capsule.get("questions", [])),
+            json.dumps(capsule.get("keywords", []))
+        ))
+        
+        conn.commit()
+        conn.close()
+        
+        logger.info(f"胶囊已保存: {capsule_id}")
+        return capsule_id
+    
+    def get_capsule(self, capsule_id: str) -> Optional[Dict]:
+        """获取胶囊详情"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("SELECT * FROM capsules WHERE id = ?", (capsule_id,))
+        row = cursor.fetchone()
+        conn.close()
+        
+        if not row:
+            return None
+        
+        columns = ["id", "topic_id", "title", "summary", "insight", "evidence", 
+                   "action_items", "questions", "dimensions", "dimensions_score",
+                   "confidence", "quality_score", "grade", "source_agents", "keywords",
+                   "category", "status", "version", "parent_id", "created_at", "updated_at"]
+        
+        item = dict(zip(columns, row))
+        item["evidence"] = json.loads(item["evidence"] or "[]")
+        item["action_items"] = json.loads(item["action_items"] or "[]")
+        item["questions"] = json.loads(item["questions"] or "[]")
+        item["dimensions"] = json.loads(item["dimensions"] or "{}")
+        item["source_agents"] = json.loads(item["source_agents"] or "[]")
+        item["keywords"] = json.loads(item["keywords"] or "[]")
+        
+        return item
+    
+    def list_capsules(
+        self,
+        status: str = None,
+        category: str = None,
+        min_score: float = None,
+        limit: int = 50,
+        offset: int = 0
+    ) -> List[Dict]:
+        """列出胶囊"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        query = "SELECT * FROM capsules WHERE 1=1"
+        params = []
+        
+        if status:
+            query += " AND status = ?"
+            params.append(status)
+        
+        if category:
+            query += " AND category = ?"
+            params.append(category)
+        
+        if min_score is not None:
+            query += " AND quality_score >= ?"
+            params.append(min_score)
+        
+        query += " ORDER BY quality_score DESC, created_at DESC LIMIT ? OFFSET ?"
+        params.extend([limit, offset])
+        
+        cursor.execute(query, params)
+        rows = cursor.fetchall()
+        conn.close()
+        
+        columns = ["id", "topic_id", "title", "summary", "insight", "evidence", 
+                   "action_items", "questions", "dimensions", "dimensions_score",
+                   "confidence", "quality_score", "grade", "source_agents", "keywords",
+                   "category", "status", "version", "parent_id", "created_at", "updated_at"]
+        
+        result = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            item["evidence"] = json.loads(item["evidence"] or "[]")
+            item["action_items"] = json.loads(item["action_items"] or "[]")
+            item["questions"] = json.loads(item["questions"] or "[]")
+            item["dimensions"] = json.loads(item["dimensions"] or "{}")
+            item["source_agents"] = json.loads(item["source_agents"] or "[]")
+            item["keywords"] = json.loads(item["keywords"] or "[]")
+            result.append(item)
+        
+        return result
+    
+    def search_capsules(self, query: str, limit: int = 20) -> List[Dict]:
+        """搜索胶囊 (全文检索)"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 使用 FTS5 全文检索
+        cursor.execute("""
+            SELECT rowid FROM capsules_fts 
+            WHERE capsules_fts MATCH ?
+            LIMIT ?
+        """, (query, limit))
+        
+        rowids = [row[0] for row in cursor.fetchall()]
+        conn.close()
+        
+        if not rowids:
+            return []
+        
+        # 获取完整胶囊数据
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        placeholders = ",".join("?" * len(rowids))
+        cursor.execute(f"SELECT * FROM capsules WHERE rowid IN ({placeholders})", rowids)
+        rows = cursor.fetchall()
+        conn.close()
+        
+        columns = ["id", "topic_id", "title", "summary", "insight", "evidence", 
+                   "action_items", "questions", "dimensions", "dimensions_score",
+                   "confidence", "quality_score", "grade", "source_agents", "keywords",
+                   "category", "status", "version", "parent_id", "created_at", "updated_at"]
+        
+        result = []
+        for row in rows:
+            item = dict(zip(columns, row))
+            item["evidence"] = json.loads(item["evidence"] or "[]")
+            item["action_items"] = json.loads(item["action_items"] or "[]")
+            item["questions"] = json.loads(item["questions"] or "[]")
+            item["dimensions"] = json.loads(item["dimensions"] or "{}")
+            item["source_agents"] = json.loads(item["source_agents"] or "[]")
+            item["keywords"] = json.loads(item["keywords"] or "[]")
+            result.append(item)
+        
+        return result
+    
+    def update_capsule_status(self, capsule_id: str, status: str) -> bool:
+        """更新胶囊状态"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE capsules SET status = ?, updated_at = ? WHERE id = ?
+        """, (status, datetime.now().isoformat(), capsule_id))
+        
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        
+        return success
+    
+    def get_capsules_by_topic(self, topic_id: str) -> List[Dict]:
+        """获取某个讨论的所有胶囊"""
+        return self.list_capsules(limit=100)
+    
+    def get_latest_capsules(self, limit: int = 10) -> List[Dict]:
+        """获取最新胶囊"""
+        return self.list_capsules(limit=limit)
+    
+    def get_top_capsules(self, limit: int = 10) -> List[Dict]:
+        """获取高质量胶囊"""
+        return self.list_capsules(min_score=60, limit=limit)
 
 
 # 全局实例
