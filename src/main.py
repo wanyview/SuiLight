@@ -39,6 +39,7 @@ from src.tasks import TaskManager, TaskStatus
 from src.storage import StorageManager
 from src.coffee import coffee_manager
 from src.share import share_manager
+from src.graph import graph_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1353,6 +1354,104 @@ async def export_html(
         "data": {
             "html": html,
             "filename": f"{title[:20]}.html"
+        }
+    }
+
+
+# ============ 知识图谱 API ============
+
+@app.get("/api/graph/visualization")
+async def get_visualization_data(limit: int = 50):
+    """获取可视化数据"""
+    from src.graph import graph_manager
+    
+    capsules = storage.list_capsules(limit=limit)
+    graph = graph_manager.export_graph_json(capsules)
+    clusters = graph_manager.get_cluster_analysis(capsules)
+    timeline = graph_manager.get_timeline(capsules)
+    stats = graph_manager.get_statistics(capsules)
+    
+    return {
+        "success": True,
+        "data": {
+            "graph": graph,
+            "clusters": clusters,
+            "timeline": timeline,
+            "statistics": stats
+        }
+    }
+
+
+@app.get("/api/graph/export")
+async def export_graph(limit: int = 100):
+    """导出图谱 JSON (D3.js 格式)"""
+    from src.graph import graph_manager
+    
+    capsules = storage.list_capsules(limit=limit)
+    graph_json = graph_manager.export_graph_json(capsules)
+    
+    return {
+        "success": True,
+        "data": graph_json
+    }
+
+
+@app.get("/api/graph/clusters")
+async def get_clusters(limit: int = 100):
+    """获取聚类分析"""
+    from src.graph import graph_manager
+    
+    capsules = storage.list_capsules(limit=limit)
+    clusters = graph_manager.get_cluster_analysis(capsules)
+    
+    return {
+        "success": True,
+        "data": clusters
+    }
+
+
+@app.get("/api/graph/timeline")
+async def get_timeline(limit: int = 100):
+    """获取时间线"""
+    from src.graph import graph_manager
+    
+    capsules = storage.list_capsules(limit=limit)
+    timeline = graph_manager.get_timeline(capsules)
+    
+    return {
+        "success": True,
+        "data": timeline
+    }
+
+
+@app.get("/api/graph/statistics")
+async def get_graph_statistics(limit: int = 100):
+    """获取图谱统计"""
+    from src.graph import graph_manager
+    
+    capsules = storage.list_capsules(limit=limit)
+    stats = graph_manager.get_statistics(capsules)
+    
+    return {
+        "success": True,
+        "data": stats
+    }
+
+
+@app.get("/api/graph/capsules/{capsule_id}/related")
+async def get_related_capsules(capsule_id: str, limit: int = 5):
+    """获取相关胶囊"""
+    from src.graph import graph_manager
+    
+    capsules = storage.list_capsules(limit=100)
+    related = graph_manager.get_related_capsules(capsule_id, capsules, limit)
+    
+    return {
+        "success": True,
+        "data": {
+            "capsule_id": capsule_id,
+            "count": len(related),
+            "related": related
         }
     }
 

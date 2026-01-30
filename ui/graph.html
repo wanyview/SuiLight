@@ -1,0 +1,312 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识图谱 🕸️ - SuiLight</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://d3js.org/d3.v7.min.js"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #1a1a2e 0%, #16213e 100%); }
+        .node { cursor: pointer; }
+        .link { stroke-opacity: 0.6; }
+        .node-label { font-size: 10px; fill: #fff; pointer-events: none; }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen text-white">
+    <!-- 导航 -->
+    <nav class="fixed top-0 left-0 right-0 bg-black/30 backdrop-blur-md z-50">
+        <div class="max-w-7xl mx-auto px-4 py-3 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🧠</span>
+                <span class="font-bold">SuiLight 知识图谱</span>
+            </div>
+            <div class="flex gap-4 text-sm">
+                <a href="/" class="hover:text-indigo-300">🏠 首页</a>
+                <a href="/?tab=agents" class="hover:text-indigo-300">🤖 思想家</a>
+                <a href="/ui/salon.html" class="hover:text-indigo-300">🧠 沙龙</a>
+                <a href="/?tab=capsules" class="hover:text-indigo-300">📦 胶囊</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="pt-16">
+        <!-- 控制栏 -->
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex gap-4">
+                <button onclick="switchView('graph')" id="btn-graph" class="bg-indigo-600 px-4 py-2 rounded-lg font-bold">🕸️ 图谱</button>
+                <button onclick="switchView('clusters')" id="btn-clusters" class="bg-gray-700 px-4 py-2 rounded-lg">📊 聚类</button>
+                <button onclick="switchView('timeline')" id="btn-timeline" class="bg-gray-700 px-4 py-2 rounded-lg">📅 时间线</button>
+            </div>
+            <div class="flex gap-4 text-sm">
+                <span id="node-count">节点: 0</span>
+                <span id="edge-count">边: 0</span>
+            </div>
+        </div>
+
+        <!-- 图谱视图 -->
+        <div id="view-graph" class="max-w-7xl mx-auto px-4">
+            <div class="bg-black/20 rounded-2xl p-4" style="height: 600px;">
+                <svg id="graph-svg" width="100%" height="100%"></svg>
+            </div>
+        </div>
+
+        <!-- 聚类视图 -->
+        <div id="view-clusters" class="max-w-6xl mx-auto px-4 hidden">
+            <div id="clusters-container" class="grid grid-cols-2 md:grid-cols-4 gap-6">
+                <!-- 动态加载 -->
+            </div>
+        </div>
+
+        <!-- 时间线视图 -->
+        <div id="view-timeline" class="max-w-4xl mx-auto px-4 hidden">
+            <div id="timeline-container" class="space-y-6">
+                <!-- 动态加载 -->
+            </div>
+        </div>
+
+        <!-- 统计面板 -->
+        <div class="max-w-7xl mx-auto px-4 py-8">
+            <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                    <div id="stat-total" class="text-3xl font-bold text-indigo-400">0</div>
+                    <div class="text-sm text-gray-400">总胶囊数</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                    <div id="stat-categories" class="text-3xl font-bold text-purple-400">0</div>
+                    <div class="text-sm text-gray-400">分类数</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                    <div id="stat-quality" class="text-3xl font-bold text-green-400">0</div>
+                    <div class="text-sm text-gray-400">平均质量</div>
+                </div>
+                <div class="bg-white/10 backdrop-blur rounded-xl p-4 text-center">
+                    <div id="stat-a" class="text-3xl font-bold text-pink-400">0</div>
+                    <div class="text-sm text-gray-400">A级胶囊</div>
+                </div>
+            </div>
+        </div>
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let graphData = null;
+        let currentView = 'graph';
+
+        // 切换视图
+        function switchView(view) {
+            currentView = view;
+            
+            // 更新按钮
+            ['graph', 'clusters', 'timeline'].forEach(v => {
+                const btn = document.getElementById(`btn-${v}`);
+                if (v === view) {
+                    btn.classList.remove('bg-gray-700');
+                    btn.classList.add('bg-indigo-600');
+                } else {
+                    btn.classList.remove('bg-indigo-600');
+                    btn.classList.add('bg-gray-700');
+                }
+                
+                document.getElementById(`view-${v}`).classList.toggle('hidden', v !== view);
+            });
+            
+            // 加载数据
+            if (view === 'graph') renderGraph();
+            if (view === 'clusters') renderClusters();
+            if (view === 'timeline') renderTimeline();
+        }
+
+        // 加载可视化数据
+        async function loadData() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/graph/visualization?limit=50`);
+                const data = await resp.json();
+                graphData = data.data;
+                
+                // 更新统计
+                const stats = graphData.statistics;
+                document.getElementById('stat-total').textContent = stats.total_capsules;
+                document.getElementById('stat-categories').textContent = stats.categories;
+                document.getElementById('stat-quality').textContent = stats.avg_quality.toFixed(1);
+                document.getElementById('stat-a').textContent = stats.a_grade_count;
+                
+                // 更新计数
+                document.getElementById('node-count').textContent = `节点: ${graphData.graph.nodes.length}`;
+                document.getElementById('edge-count').textContent = `边: ${graphData.graph.links.length}`;
+                
+                // 渲染
+                renderGraph();
+            } catch (e) {
+                console.error('加载数据失败:', e);
+            }
+        }
+
+        // 渲染图谱
+        function renderGraph() {
+            if (!graphData) return;
+            
+            const svg = d3.select('#graph-svg');
+            svg.selectAll('*').remove();
+            
+            const width = svg.node().clientWidth;
+            const height = svg.node().clientHeight;
+            
+            // 创建力导向图
+            const simulation = d3.forceSimulation(graphData.graph.nodes)
+                .force('link', d3.forceLink(graphData.graph.links).id(d => d.id).distance(100))
+                .force('charge', d3.forceManyBody().strength(-300))
+                .force('center', d3.forceCenter(width / 2, height / 2))
+                .force('collision', d3.forceCollide(30));
+            
+            // 绘制边
+            const link = svg.append('g')
+                .selectAll('line')
+                .data(graphData.graph.links)
+                .enter().append('line')
+                .attr('class', 'link')
+                .attr('stroke', d => {
+                    const colors = {
+                        'related': '#6366f1',
+                        'from_category': '#8b5cf6',
+                        'from_agent': '#ec4899',
+                        'has_keyword': '#10b981'
+                    };
+                    return colors[d.type] || '#6b7280';
+                })
+                .attr('stroke-width', d => d.weight * 3);
+            
+            // 绘制节点
+            const node = svg.append('g')
+                .selectAll('circle')
+                .data(graphData.graph.nodes)
+                .enter().append('circle')
+                .attr('class', 'node')
+                .attr('r', d => {
+                    const sizes = { 'category': 25, 'agent': 20, 'keyword': 12, 'capsule': 15 };
+                    return sizes[d.type] || 10;
+                })
+                .attr('fill', d => {
+                    const colors = {
+                        'category': '#8b5cf6',
+                        'agent': '#ec4899',
+                        'keyword': '#10b981',
+                        'capsule': '#6366f1'
+                    };
+                    return colors[d.type] || '#6b7280';
+                })
+                .call(drag(simulation));
+            
+            // 节点标签
+            const labels = svg.append('g')
+                .selectAll('text')
+                .data(graphData.graph.nodes)
+                .enter().append('text')
+                .attr('class', 'node-label')
+                .text(d => d.label.length > 10 ? d.label.substring(0, 10) + '...' : d.label)
+                .attr('text-anchor', 'middle')
+                .attr('dy', d => (d.type === 'category' ? 35 : 25));
+            
+            // 悬停效果
+            node.append('title')
+                .text(d => `${d.label}\n类型: ${d.type}`);
+            
+            // 更新位置
+            simulation.on('tick', () => {
+                link
+                    .attr('x1', d => d.source.x)
+                    .attr('y1', d => d.source.y)
+                    .attr('x2', d => d.target.x)
+                    .attr('y2', d => d.target.y);
+                
+                node
+                    .attr('cx', d => d.x)
+                    .attr('cy', d => d.y);
+                
+                labels
+                    .attr('x', d => d.x)
+                    .attr('y', d => d.y);
+            });
+        }
+
+        // 拖拽函数
+        function drag(simulation) {
+            function dragstarted(event) {
+                if (!event.active) simulation.alphaTarget(0.3).restart();
+                event.fx = event.x;
+                event.fy = event.y;
+            }
+            
+            function dragged(event) {
+                event.fx = event.x;
+                event.fy = event.y;
+            }
+            
+            function dragended(event) {
+                if (!event.active) simulation.alphaTarget(0);
+                event.fx = null;
+                event.fy = null;
+            }
+            
+            return d3.drag()
+                .on('start', dragstarted)
+                .on('drag', dragged)
+                .on('end', dragended);
+        }
+
+        // 渲染聚类
+        function renderClusters() {
+            if (!graphData) return;
+            
+            const container = document.getElementById('clusters-container');
+            const clusters = graphData.clusters.clusters || [];
+            
+            container.innerHTML = clusters.map(c => `
+                <div class="bg-white/10 backdrop-blur rounded-xl p-6">
+                    <div class="text-3xl mb-4">${c.label}</div>
+                    <div class="text-4xl font-bold mb-2">${c.count}</div>
+                    <div class="text-sm text-gray-400">个胶囊</div>
+                    <div class="mt-4 h-2 bg-gray-700 rounded-full">
+                        <div class="h-full bg-indigo-500 rounded-full" style="width: ${c.avg_quality}%"></div>
+                    </div>
+                    <div class="text-sm text-gray-400 mt-1">平均质量: ${c.avg_quality.toFixed(1)}</div>
+                </div>
+            `).join('');
+        }
+
+        // 渲染时间线
+        function renderTimeline() {
+            if (!graphData) return;
+            
+            const container = document.getElementById('timeline-container');
+            const timeline = graphData.timeline.timeline || [];
+            
+            container.innerHTML = timeline.map(t => `
+                <div class="bg-white/10 backdrop-blur rounded-xl p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <div class="text-xl font-bold">📅 ${t.week}</div>
+                            <div class="text-sm text-gray-400">${t.count} 个新胶囊</div>
+                        </div>
+                        <div class="text-right">
+                            <div class="text-2xl font-bold text-indigo-400">${t.avg_quality.toFixed(1)}</div>
+                            <div class="text-sm text-gray-400">平均质量</div>
+                        </div>
+                    </div>
+                    <div class="flex flex-wrap gap-2">
+                        ${t.capsules.map(c => `
+                            <span class="bg-white/10 px-3 py-1 rounded-full text-sm">${c}</span>
+                        `).join('')}
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            loadData();
+        });
+    </script>
+</body>
+</html>
