@@ -1,0 +1,36 @@
+# SuiLight Knowledge Salon - 依赖列表
+
+# 核心依赖
+fastapi>=0.109.0
+uvicorn[standard]>=0.27.0
+pydantic>=2.5.0
+
+# AI/ML
+openai>=1.10.0  # MiniMax 兼容
+
+# 数据库
+chromadb>=0.5.0  # 向量数据库
+redis>=5.0.0  # 消息队列/缓存
+
+# 数据处理
+python-multipart>=0.0.6  # 文件上传
+python-docx>=1.1.0  # Word 文档
+markdown>=3.5.0  # Markdown 解析
+
+# 工具
+python-dotenv>=1.0.0
+pyyaml>=6.0.0
+httpx>=0.26.0
+
+# 测试
+pytest>=7.4.0
+pytest-asyncio>=0.23.0
+httpx>=0.26.0  # FastAPI 测试
+
+# 开发工具
+black>=23.0.0
+isort>=5.13.0
+mypy>=1.8.0
+
+# 可选依赖
+# pip install "sui-light[full]"  # 安装全部依赖
