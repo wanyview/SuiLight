@@ -4,33 +4,56 @@
 fastapi>=0.109.0
 uvicorn[standard]>=0.27.0
 pydantic>=2.5.0
+httpx>=0.26.0
 
-# AI/ML
-openai>=1.10.0  # MiniMax 兼容
+# AI/ML - 多后端支持
+openai>=1.10.0        # OpenAI/MiniMax/Groq 兼容
+groq>=0.5.0           # Groq 免费 tier (可选)
+requests>=2.31.0       # Ollama 本地调用
 
 # 数据库
-chromadb>=0.5.0  # 向量数据库
-redis>=5.0.0  # 消息队列/缓存
+chromadb>=0.5.0       # 向量数据库 (可选)
+redis>=5.0.0          # 消息队列/缓存 (可选)
 
 # 数据处理
 python-multipart>=0.0.6  # 文件上传
-python-docx>=1.1.0  # Word 文档
-markdown>=3.5.0  # Markdown 解析
+python-docx>=1.1.0     # Word 文档
+markdown>=3.5.0        # Markdown 解析
 
 # 工具
 python-dotenv>=1.0.0
 pyyaml>=6.0.0
-httpx>=0.26.0
 
 # 测试
 pytest>=7.4.0
 pytest-asyncio>=0.23.0
-httpx>=0.26.0  # FastAPI 测试
 
 # 开发工具
 black>=23.0.0
 isort>=5.13.0
 mypy>=1.8.0
+
+# ============ 安装指南 ============
+#
+# 最小安装 (Mock 模式):
+#   pip install -r requirements.txt
+#
+# Ollama 本地模式:
+#   1. 安装 Ollama: https://ollama.ai
+#   2. 运行: ollama run llama3
+#   3. 设置环境变量: export LLM_PROVIDER=ollama
+#
+# Groq 免费模式:
+#   1. 注册: https://console.groq.cloud
+#   2. 获取 API Key
+#   3. 设置环境变量: export GROQ_API_KEY="your-key"
+#   4. pip install groq
+#
+# MiniMax 模式:
+#   1. 获取 API Key
+#   2. 设置环境变量: export MINIMAX_API_KEY="your-key"
+#
+# ============
 
 # 可选依赖
 # pip install "sui-light[full]"  # 安装全部依赖

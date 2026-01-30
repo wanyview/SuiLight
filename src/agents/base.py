@@ -2,11 +2,12 @@
 SuiLight Knowledge Salon - Agent Base Framework
 多智能体核心框架
 
-基于 MiniMax LLM 的知识沙龙 Agent 系统
+支持多种 LLM 后端 (Ollama/Groq/OpenAI/MiniMax/Mock)
 """
 
 import json
 import uuid
+import os
 from typing import Dict, List, Optional, Any, Callable
 from dataclasses import dataclass, field, asdict
 from datetime import datetime
@@ -171,7 +172,7 @@ class Agent:
     
     def think(self, message: str, context: List[Dict] = None) -> str:
         """
-        思考过程 (内部调用 LLM)
+        思考过程 (调用 LLM)
         
         Args:
             message: 用户输入
@@ -183,15 +184,44 @@ class Agent:
         self.status = AgentStatus.THINKING
         
         try:
-            # TODO: 集成 MiniMax API
-            response = self._mock_think(message, context)
+            # 使用 LLM 工厂获取响应
+            from integrations.llm_factory import create_llm_client
+            
+            # 获取 LLM 客户端 (从环境变量或默认 Mock)
+            llm = create_llm_client(
+                provider=os.getenv("LLM_PROVIDER", "mock"),
+                model=os.getenv("LLM_MODEL", "")
+            )
+            
+            # 构建消息
+            messages = []
+            if context:
+                for c in context[-5:]:  # 只用最近 5 条
+                    messages.append({
+                        "role": c.get("role", "assistant"),
+                        "content": c.get("content", "")
+                    })
+            messages.append({"role": "user", "content": message})
+            
+            # 调用 LLM
+            response = llm.chat(
+                messages=messages,
+                system_prompt=self.config.system_prompt,
+                temperature=0.7
+            )
+            
             return response
+            
+        except Exception as e:
+            logger.error(f"LLM 调用失败: {e}")
+            return self._mock_think(message, context)
+        
         finally:
             self.status = AgentStatus.IDLE
     
     def _mock_think(self, message: str, context: List[Dict] = None) -> str:
-        """Mock 思考过程 (待集成 MiniMax)"""
-        return f"【{self.config.name}】{message} - 这是一个示例回复，待集成 MiniMax API。"
+        """Mock 思考过程 (无 LLM 时使用)"""
+        return f"【{self.config.name}】收到: {message}\n\n(配置 LLM 后可获得智能回复: Ollama/Groq/OpenAI/MiniMax)"
     
     def chat(self, message: str, context: List[Dict] = None) -> str:
         """
