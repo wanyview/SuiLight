@@ -1,0 +1,349 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuiLight 知识沙龙 - PPT</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .slide { display: none; min-height: 100vh; }
+        .slide.active { display: flex; }
+        .progress { height: 4px; background: linear-gradient(90deg, #6366f1 0%, #8b5cf6 100%); }
+        .title-gradient { background: linear-gradient(135deg, #6366f1 0%, #8b5cf6 50%, #d946ef 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+        .card { background: linear-gradient(135deg, rgba(99, 102, 241, 0.1) 0%, rgba(139, 92, 246, 0.1) 100%); border: 1px solid rgba(139, 92, 246, 0.2); }
+        .datm-item { transition: all 0.3s; }
+        .datm-item:hover { transform: scale(1.05); }
+    </style>
+</head>
+<body class="bg-gray-900 text-white">
+    <!-- 进度条 -->
+    <div class="progress fixed top-0 left-0 transition-all duration-300" style="width: 0%" id="progress"></div>
+    
+    <!-- 幻灯片容器 -->
+    <div id="slides">
+        
+        <!-- Slide 1: 封面 -->
+        <div class="slide active flex-col items-center justify-center p-12 bg-gradient-to-br from-gray-900 via-purple-900 to-gray-900" data-index="0">
+            <div class="text-8xl mb-8">🧠</div>
+            <h1 class="text-6xl font-bold mb-6 text-center">
+                <span class="title-gradient">SuiLight 知识沙龙</span>
+            </h1>
+            <p class="text-2xl text-gray-400 mb-12">多智能体协作知识探索平台</p>
+            <div class="flex gap-4 text-sm text-gray-500">
+                <span>100+ 伟大思想家</span>
+                <span>•</span>
+                <span>DATM 评价体系</span>
+                <span>•</span>
+                <span>知识胶囊产出</span>
+            </div>
+            <div class="mt-12 text-gray-600">按 → 键或点击下一页</div>
+        </div>
+        
+        <!-- Slide 2: 问题 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="1">
+            <h2 class="text-4xl font-bold mb-12">🤔 核心问题</h2>
+            <div class="max-w-3xl text-center">
+                <div class="text-3xl mb-8 leading-relaxed">
+                    "如何让不同领域的知识<br>产生<span class="text-purple-400">碰撞</span>与<span class="text-purple-400">涌现</span>？"
+                </div>
+                <div class="grid grid-cols-3 gap-6 mt-12">
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">🔬</div>
+                        <div class="text-xl font-bold">科学</div>
+                        <div class="text-gray-400">客观、真理</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">⚖️</div>
+                        <div class="text-xl font-bold">伦理</div>
+                        <div class="text-gray-400">价值、判断</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">🎨</div>
+                        <div class="text-xl font-bold">人文</div>
+                        <div class="text-gray-400">情感、表达</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 3: 解决方案 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="2">
+            <h2 class="text-4xl font-bold mb-12">💡 解决方案</h2>
+            <div class="max-w-4xl">
+                <div class="text-center text-2xl mb-12">
+                    让 <span class="text-purple-400 font-bold">100位伟大思想家</span> 进行多轮讨论
+                </div>
+                <div class="grid grid-cols-4 gap-4 text-center">
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-5xl mb-4">👴</div>
+                        <div class="text-lg font-bold">历史思想家</div>
+                        <div class="text-gray-400">牛顿、爱因斯坦<br>孔子、苏格拉底...</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-5xl mb-4">💬</div>
+                        <div class="text-lg font-bold">多轮讨论</div>
+                        <div class="text-gray-400">观点碰撞<br>互相补充</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-5xl mb-4">🧠</div>
+                        <div class="text-lg font-bold">涌现智慧</div>
+                        <div class="text-gray-400">超越个体<br>产生洞见</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-5xl mb-4">📦</div>
+                        <div class="text-lg font-bold">知识胶囊</div>
+                        <div class="text-gray-400">精华产出<br>可沉淀复用</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 4: DATM 体系 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="3">
+            <h2 class="text-4xl font-bold mb-12">📊 DATM 评价体系</h2>
+            <div class="flex gap-12 items-center">
+                <div class="text-center">
+                    <div class="grid grid-cols-2 gap-4">
+                        <div class="datm-item card p-6 rounded-xl cursor-pointer">
+                            <div class="text-5xl mb-2">🔬</div>
+                            <div class="text-xl font-bold text-blue-400">Truth (真)</div>
+                            <div class="text-gray-400 text-sm">科学性、客观性</div>
+                        </div>
+                        <div class="datm-item card p-6 rounded-xl cursor-pointer">
+                            <div class="text-5xl mb-2">⚖️</div>
+                            <div class="text-xl font-bold text-green-400">Goodness (善)</div>
+                            <div class="text-gray-400 text-sm">伦理性、价值判断</div>
+                        </div>
+                        <div class="datm-item card p-6 rounded-xl cursor-pointer">
+                            <div class="text-5xl mb-2">🎨</div>
+                            <div class="text-xl font-bold text-pink-400">Beauty (美)</div>
+                            <div class="text-gray-400 text-sm">人文性、感染力</div>
+                        </div>
+                        <div class="datm-item card p-6 rounded-xl cursor-pointer">
+                            <div class="text-5xl mb-2">💡</div>
+                            <div class="text-xl font-bold text-purple-400">Intelligence (灵)</div>
+                            <div class="text-gray-400 text-sm">创新性、前瞻性</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-left max-w-md">
+                    <div class="text-2xl font-bold mb-4">质量分数</div>
+                    <div class="text-gray-400 mb-4">
+                        综合分数 = (真 + 善 + 美 + 灵) / 4
+                    </div>
+                    <div class="space-y-2">
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-green-500 rounded"></span>
+                            <span>A (≥80): 优秀</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-blue-500 rounded"></span>
+                            <span>B (60-79): 良好</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-yellow-500 rounded"></span>
+                            <span>C (40-59): 一般</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <span class="w-4 h-4 bg-red-500 rounded"></span>
+                            <span>D (<40): 待改进</span>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 5: 知识胶囊 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="4">
+            <h2 class="text-4xl font-bold mb-12">📦 知识胶囊</h2>
+            <div class="max-w-4xl text-center">
+                <div class="text-2xl mb-8">讨论的精华产出物</div>
+                <div class="bg-gray-800 rounded-2xl p-8 border border-gray-700">
+                    <div class="grid grid-cols-2 gap-8 text-left">
+                        <div>
+                            <div class="text-purple-400 font-bold mb-2">核心洞见</div>
+                            <div class="text-gray-300">讨论产生的最重要观点，凝练为可复用的知识单元</div>
+                        </div>
+                        <div>
+                            <div class="text-blue-400 font-bold mb-2">支撑证据</div>
+                            <div class="text-gray-300">引用来源、数据、研究结论</div>
+                        </div>
+                        <div>
+                            <div class="text-green-400 font-bold mb-2">行动建议</div>
+                            <div class="text-gray-300">可执行的下一步行动</div>
+                        </div>
+                        <div>
+                            <div class="text-yellow-400 font-bold mb-2">开放问题</div>
+                            <div class="text-gray-300">值得继续探索的问题</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="mt-8 text-gray-500">
+                    知识胶囊 = 可量化、可评价、可沉淀、可复用的知识资产
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 6: 演示场景 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="5">
+            <h2 class="text-4xl font-bold mb-12">🎭 演示场景</h2>
+            <div class="max-w-4xl">
+                <div class="card p-8 rounded-2xl mb-8">
+                    <div class="text-3xl font-bold mb-4">"AI 是否会产生自我意识？"</div>
+                    <div class="text-gray-400 mb-6">5位跨领域专家的多轮讨论</div>
+                    <div class="grid grid-cols-5 gap-4">
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">🍎</div>
+                            <div class="text-sm">牛顿</div>
+                            <div class="text-xs text-gray-500">物理学</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">🧠</div>
+                            <div class="text-sm">弗洛伊德</div>
+                            <div class="text-xs text-gray-500">心理学</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">💻</div>
+                            <div class="text-sm">图灵</div>
+                            <div class="text-xs text-gray-500">计算机</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">📜</div>
+                            <div class="text-sm">孔子</div>
+                            <div class="text-xs text-gray-500">哲学</div>
+                        </div>
+                        <div class="text-center">
+                            <div class="text-4xl mb-2">🔮</div>
+                            <div class="text-sm">荣格</div>
+                            <div class="text-xs text-gray-500">心理学</div>
+                        </div>
+                    </div>
+                </div>
+                <div class="text-center text-xl text-purple-400">
+                    涌现洞察: 意识可能有多重形态，机器意识 ≠ 人类意识
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 7: 技术架构 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="6">
+            <h2 class="text-4xl font-bold mb-12">🏗️ 技术架构</h2>
+            <div class="max-w-4xl">
+                <div class="grid grid-cols-3 gap-6 text-center">
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">🐍</div>
+                        <div class="text-xl font-bold">Python</div>
+                        <div class="text-gray-400">FastAPI + Celery</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">🧠</div>
+                        <div class="text-xl font-bold">Agent</div>
+                        <div class="text-gray-400">多智能体协作</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">💬</div>
+                        <div class="text-xl font-bold">讨论系统</div>
+                        <div class="text-gray-400">多轮对话管理</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">📦</div>
+                        <div class="text-xl font-bold">知识胶囊</div>
+                        <div class="text-gray-400">精华产出机制</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">🗄️</div>
+                        <div class="text-xl font-bold">存储</div>
+                        <div class="text-gray-400">SQLite 持久化</div>
+                    </div>
+                    <div class="card p-6 rounded-xl">
+                        <div class="text-4xl mb-4">🌐</div>
+                        <div class="text-xl font-bold">Web UI</div>
+                        <div class="text-gray-400">Tailwind + Chart.js</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 8: 部署状态 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gray-900" data-index="7">
+            <h2 class="text-4xl font-bold mb-12">🚀 部署状态</h2>
+            <div class="max-w-2xl">
+                <div class="card p-8 rounded-2xl text-center">
+                    <div class="text-6xl mb-6">🏠</div>
+                    <div class="text-2xl font-bold mb-4">本地开发</div>
+                    <div class="text-gray-400 mb-6">http://localhost:8000</div>
+                    <div class="flex justify-center gap-4">
+                        <span class="bg-green-500/20 text-green-400 px-4 py-2 rounded-full">✅ 运行中</span>
+                    </div>
+                </div>
+                <div class="mt-8 card p-6 rounded-xl text-center">
+                    <div class="text-4xl mb-4">☁️</div>
+                    <div class="text-xl font-bold mb-2">Vercel 部署</div>
+                    <div class="text-gray-400">配置已就绪，待导入</div>
+                    <div class="mt-4 text-sm text-gray-500">
+                        访问 https://vercel.com 导入 wanyview/SuiLight
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- Slide 9: 结束 -->
+        <div class="slide flex-col items-center justify-center p-12 bg-gradient-to-br from-purple-900 via-gray-900 to-purple-900" data-index="8">
+            <div class="text-8xl mb-8">🧠</div>
+            <h2 class="text-5xl font-bold mb-6">感谢聆听</h2>
+            <div class="text-2xl text-gray-400 mb-12">SuiLight 知识沙龙</div>
+            <div class="flex gap-6 text-sm text-gray-500">
+                <span>GitHub: wanyview/SuiLight</span>
+            </div>
+            <div class="mt-12 text-gray-600">按 ← → 键切换页面</div>
+        </div>
+        
+    </div>
+    
+    <!-- 控制按钮 -->
+    <div class="fixed bottom-8 right-8 flex gap-2">
+        <button onclick="prevSlide()" class="bg-gray-700 hover:bg-gray-600 px-4 py-2 rounded-lg">←</button>
+        <button onclick="nextSlide()" class="bg-purple-600 hover:bg-purple-500 px-4 py-2 rounded-lg">→</button>
+    </div>
+    
+    <!-- 页码 -->
+    <div class="fixed bottom-8 left-8 text-gray-500" id="page">1 / 9</div>
+    
+    <script>
+        let currentSlide = 0;
+        const slides = document.querySelectorAll('.slide');
+        const total = slides.length;
+        const progress = document.getElementById('progress');
+        const pageEl = document.getElementById('page');
+        
+        function showSlide(index) {
+            slides.forEach((s, i) => s.classList.remove('active'));
+            slides[index].classList.add('active');
+            progress.style.width = ((index + 1) / total * 100) + '%';
+            pageEl.textContent = (index + 1) + ' / ' + total;
+        }
+        
+        function nextSlide() {
+            currentSlide = (currentSlide + 1) % total;
+            showSlide(currentSlide);
+        }
+        
+        function prevSlide() {
+            currentSlide = (currentSlide - 1 + total) % total;
+            showSlide(currentSlide);
+        }
+        
+        // 键盘控制
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'ArrowRight' || e.key === ' ') nextSlide();
+            if (e.key === 'ArrowLeft') prevSlide();
+        });
+        
+        // 点击控制
+        document.addEventListener('click', () => nextSlide());
+        
+        // 初始化
+        showSlide(0);
+    </script>
+</body>
+</html>
