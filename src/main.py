@@ -750,6 +750,125 @@ async def get_stats():
     }
 
 
+# ============ 知识胶囊 API ============
+
+@app.get("/api/capsules")
+async def list_capsules(status: str = None):
+    """列出知识胶囊"""
+    # 简化的胶囊列表 (实际应从存储读取)
+    return {
+        "success": True,
+        "data": {
+            "count": 0,
+            "capsules": []
+        }
+    }
+
+
+@app.post("/api/discussions/{topic_id}/generate_capsule")
+async def generate_capsule(topic_id: str):
+    """
+    从讨论生成知识胶囊
+    
+    这是知识沙龙的核心产出机制：
+    1. 收集讨论中的所有贡献
+    2. 提取核心洞见、证据、建议
+    3. 计算 DATM 维度评分
+    4. 生成知识胶囊
+    5. 评价胶囊质量
+    """
+    from src.knowledge.capsule import CapsuleGenerator, CapsuleEvaluator
+    
+    topic = discussion_manager.topics.get(topic_id)
+    if not topic:
+        raise HTTPException(status_code=404, detail="讨论不存在")
+    
+    # 获取讨论贡献
+    contributions = []
+    for c in discussion_manager.contributions:
+        if c.topic_id == topic_id:
+            contributions.append({
+                "agent_name": c.agent_name,
+                "content": c.content,
+                "role": c.role,
+                "round_num": c.round_num
+            })
+    
+    participants = list(set(c.agent_name for c in discussion_manager.contributions if c.topic_id == topic_id))
+    
+    # 生成胶囊
+    generator = CapsuleGenerator()
+    capsule = generator.generate_from_discussion(
+        topic_title=topic.title,
+        topic_description=topic.description,
+        contributions=contributions,
+        participants=participants
+    )
+    capsule.topic_id = topic_id
+    
+    # 评价胶囊
+    evaluator = CapsuleEvaluator()
+    evaluation = evaluator.evaluate(capsule)
+    
+    # 保存到存储
+    storage.save_insight(
+        topic_id=topic_id,
+        agent_id="system",
+        content=capsule.insight,
+        insight_type="capsule",
+        confidence=capsule.confidence
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "capsule": capsule.to_dict(),
+            "evaluation": evaluation
+        }
+    }
+
+
+@app.post("/api/capsules")
+async def create_capsule(
+    title: str,
+    insight: str,
+    topic_id: str = None
+):
+    """手动创建知识胶囊"""
+    from src.knowledge.capsule import KnowledgeCapsule, CapsuleGenerator
+    
+    generator = CapsuleGenerator()
+    
+    capsule = KnowledgeCapsule(
+        topic_id=topic_id or "",
+        title=title,
+        insight=insight,
+        summary=insight[:100]
+    )
+    
+    return {
+        "success": True,
+        "data": capsule.to_dict()
+    }
+
+
+@app.get("/api/capsules/{capsule_id}")
+async def get_capsule(capsule_id: str):
+    """获取胶囊详情"""
+    from src.knowledge.capsule import CapsuleEvaluator
+    
+    # 简化的胶囊获取 (实际应从存储读取)
+    evaluator = CapsuleEvaluator()
+    
+    return {
+        "success": True,
+        "data": {
+            "id": capsule_id,
+            "message": "胶囊详情接口"
+        }
+    }
+
+
 # ============ 启动 ============
 
 if __name__ == "__main__":
