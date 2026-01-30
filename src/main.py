@@ -7,6 +7,7 @@ SuiLight Knowledge Salon - API Server
 - 预设伟大思想家 (100位专家)
 - 协作讨论框架
 - 知识沉淀
+- 异步任务队列
 """
 
 import os
@@ -28,6 +29,7 @@ from src.knowledge.discussion import (
     DiscussionManager, DiscussionPhase,
     get_great_discussions
 )
+from src.tasks import TaskManager, TaskStatus
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -36,6 +38,11 @@ logger = logging.getLogger(__name__)
 registry = AgentRegistry()
 generator = AgentGenerator()
 discussion_manager = DiscussionManager(registry)
+task_manager = TaskManager()
+
+# 注入依赖
+task_manager.set_registry(registry)
+task_manager.set_discussion_manager(discussion_manager)
 
 # FastAPI 应用
 @asynccontextmanager
@@ -43,6 +50,7 @@ async def lifespan(app: FastAPI):
     logger.info("🚀 SuiLight Knowledge Salon 启动")
     logger.info("📚 100位伟大思想家知识沙龙")
     logger.info(f"🧠 当前注册 Agent: {len(registry.list_all())} 位")
+    logger.info("⚡ 异步任务队列已就绪")
     yield
     logger.info("👋 服务关闭")
 
@@ -107,6 +115,20 @@ class AddContributionRequest(BaseModel):
     role: str = "commentator"
     round_num: int = 1
 
+# ============ 任务相关模型 ============
+
+class CreateTaskRequest(BaseModel):
+    task_type: str  # create_agents / run_discussion / extract_insights / chat_batch
+    params: Dict = {}
+
+class TaskType:
+    """任务类型"""
+    CREATE_AGENTS = "create_agents"
+    RUN_DISCUSSION = "run_discussion"
+    EXTRACT_INSIGHTS = "extract_insights"
+    CHAT_BATCH = "chat_batch"
+
+
 # ============ API 端点 ============
 
 @app.get("/")
@@ -120,7 +142,8 @@ async def root():
             "100位伟大思想家 Agent",
             "多学科协作讨论",
             "知识涌现与沉淀",
-            "多 LLM 支持"
+            "多 LLM 支持",
+            "异步任务队列"
         ]
     }
 
@@ -199,8 +222,6 @@ async def list_presets():
 async def get_great_minds(domain: str = None, search: str = None):
     """获取伟大思想家列表"""
     if search:
-        # 搜索
-        from src.agents.presets import GREAT_MINDS
         results = {}
         for name, info in GREAT_MINDS.items():
             if search.lower() in name.lower():
@@ -211,7 +232,6 @@ async def get_great_minds(domain: str = None, search: str = None):
         }
     
     if domain:
-        from src.agents.presets import GREAT_MINDS
         results = {}
         for name, info in GREAT_MINDS.items():
             if info["domain"] == domain:
@@ -263,7 +283,7 @@ async def create_from_preset(names: List[str]):
 
 @app.post("/api/presets/create_all")
 async def create_all_presets(domain: str = None, limit: int = 50):
-    """批量创建预设 Agent"""
+    """批量创建预设 Agent (同步)"""
     configs = create_agent_configs()
     
     if domain:
@@ -508,6 +528,135 @@ async def search_agents(domain: str = None, topic: str = None):
     return {
         "success": True,
         "data": [a.to_dict() for a in agents]
+    }
+
+# ============ 任务队列 API ============
+
+@app.get("/api/tasks")
+async def list_tasks(status: str = None):
+    """列出任务"""
+    task_status = None
+    if status:
+        try:
+            task_status = TaskStatus(status)
+        except ValueError:
+            raise HTTPException(status_code=400, detail="Invalid status")
+    
+    tasks = task_manager.list_tasks(task_status)
+    
+    return {
+        "success": True,
+        "data": {
+            "total": len(tasks),
+            "tasks": [t.to_dict() for t in tasks]
+        }
+    }
+
+@app.get("/api/tasks/{task_id}")
+async def get_task(task_id: str):
+    """获取任务详情"""
+    task = task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    return {
+        "success": True,
+        "data": task.to_dict()
+    }
+
+@app.post("/api/tasks")
+async def create_task(request: CreateTaskRequest):
+    """创建后台任务
+    
+    支持的任务类型:
+    - create_agents: 批量创建 Agent
+    - run_discussion: 运行讨论
+    - extract_insights: 提取洞见
+    - chat_batch: 批量对话
+    """
+    task = task_manager.create_task(
+        task_type=request.task_type,
+        params=request.params
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "task_id": task.task_id,
+            "task_type": task.task_type,
+            "status": task.status.value,
+            "message": "任务已提交，请使用 /api/tasks/{task_id} 查询状态"
+        }
+    }
+
+@app.post("/api/tasks/{task_id}/cancel")
+async def cancel_task(task_id: str):
+    """取消任务"""
+    success = task_manager.cancel_task(task_id)
+    if not success:
+        raise HTTPException(status_code=400, detail="无法取消任务（可能已完成或不存在）")
+    
+    return {
+        "success": True,
+        "message": "任务已取消"
+    }
+
+@app.delete("/api/tasks/{task_id}")
+async def delete_task(task_id: str):
+    """删除任务"""
+    task = task_manager.get_task(task_id)
+    if not task:
+        raise HTTPException(status_code=404, detail="任务不存在")
+    
+    # 从任务列表中移除
+    del task_manager.tasks[task_id]
+    
+    return {
+        "success": True,
+        "message": "任务已删除"
+    }
+
+# ============ 快捷任务 ============
+
+@app.post("/api/tasks/create_agents_background")
+async def create_agents_background(domain: str = None, limit: int = 50):
+    """后台批量创建 Agent (快捷接口)"""
+    task = task_manager.create_task(
+        task_type="create_agents",
+        params={
+            "preset": "all",
+            "domain": domain,
+            "limit": limit
+        }
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "task_id": task.task_id,
+            "status": task.status.value,
+            "message": f"正在后台创建 {limit} 位 Agent..."
+        }
+    }
+
+@app.post("/api/tasks/run_discussion_background")
+async def run_discussion_background(topic_id: str, max_rounds: int = 3):
+    """后台运行讨论 (快捷接口)"""
+    task = task_manager.create_task(
+        task_type="run_discussion",
+        params={
+            "topic_id": topic_id,
+            "max_rounds": max_rounds
+        }
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "task_id": task.task_id,
+            "status": task.status.value,
+            "message": f"正在后台运行讨论 ({max_rounds} 轮)..."
+        }
     }
 
 

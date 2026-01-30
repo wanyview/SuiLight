@@ -9,6 +9,7 @@
 - 🧠 **DATM 知识矩阵** - Truth/Goodness/Beauty/Intelligence 四维框架
 - 💬 **协作讨论** - 多 Agent 围绕科学发现/发明深度讨论
 - 📚 **知识涌现** - 从讨论中提取洞见和创新想法
+- ⚡ **异步任务队列** - 支持后台任务、多任务并行
 - 🌐 **多 LLM 支持** - 免费 + 付费，本地 + 云端
 
 ## 🚀 快速开始
@@ -21,6 +22,10 @@ cd SuiLight
 
 pip install -r requirements.txt
 
+# 需要先启动 Redis (任务队列必须)
+docker run -d -p 6379:6379 redis:alpine
+
+# 启动 API 服务
 python -m uvicorn src.main:app --reload
 
 # 访问 http://localhost:8000
@@ -82,6 +87,81 @@ python -m uvicorn src.main:app --reload
 | 莱特兄弟 | 工程 | 飞机 |
 | 希波克拉底 | 医学 | 医学之父 |
 
+## ⚡ 异步任务队列
+
+### 架构
+
+```
+API Server (FastAPI) → Redis Queue → Celery Worker → Task执行
+                     ↓
+              状态存储在 Redis
+```
+
+### 启动方式
+
+```bash
+# 1. 启动 Redis (必须)
+docker run -d -p 6379:6379 redis:alpine
+
+# 2. 启动 Celery Worker (新终端)
+cd SuiLight
+celery -A src.tasks worker --loglevel=info
+
+# 3. 启动 API 服务
+python -m uvicorn src.main:app --reload
+```
+
+### 使用示例
+
+```python
+import requests
+import time
+
+# 1. 提交后台任务 (批量创建 Agent)
+resp = requests.post("http://localhost:8000/api/tasks/create_agents_background", json={
+    "domain": "physics",
+    "limit": 20
+})
+task_id = resp.json()["data"]["task_id"]
+print(f"任务ID: {task_id}")
+
+# 2. 查询任务状态
+while True:
+    resp = requests.get(f"http://localhost:8000/api/tasks/{task_id}")
+    data = resp.json()["data"]
+    print(f"状态: {data['status']}, 进度: {data['progress']}%")
+    
+    if data["status"] == "success":
+        print(f"结果: {data['result']}")
+        break
+    elif data["status"] == "failure":
+        print(f"错误: {data['error']}")
+        break
+    
+    time.sleep(2)
+```
+
+### 任务 API
+
+| 接口 | 方法 | 说明 |
+|------|------|------|
+| `/api/tasks` | GET | 列出所有任务 |
+| `/api/tasks/{id}` | GET | 获取任务详情 |
+| `/api/tasks` | POST | 创建任务 |
+| `/api/tasks/{id}/cancel` | POST | 取消任务 |
+| `/api/tasks/{id}` | DELETE | 删除任务 |
+| `/api/tasks/create_agents_background` | POST | 快捷创建 Agent |
+| `/api/tasks/run_discussion_background` | POST | 快捷运行讨论 |
+
+### 任务类型
+
+| 类型 | 说明 |
+|------|------|
+| `create_agents` | 批量创建 Agent |
+| `run_discussion` | 运行完整讨论 |
+| `extract_insights` | 批量提取洞见 |
+| `chat_batch` | 批量对话 |
+
 ## 💬 讨论系统
 
 ### 创建讨论
@@ -98,28 +178,19 @@ curl -X POST "http://localhost:8000/api/discussions" \
 
 ### 分配参与者
 ```bash
-curl -X POST "http://localhost:8000/api/discussions/{topic_id}/assign" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent_ids": ["agent1_id", "agent2_id"]
-  }'
+curl -X POST "http://localhost:8000/api/discussions/{topic_id}/assign"
 ```
 
-### 开始讨论
+### 开始讨论 (可放后台运行)
 ```bash
+# 同步方式
 curl -X POST "http://localhost:8000/api/discussions/{topic_id}/start"
-```
 
-### 添加贡献
-```bash
-curl -X POST "http://localhost:8000/api/discussions/{topic_id}/contribute" \
-  -H "Content-Type: application/json" \
-  -d '{
-    "agent_id": "agent_id",
-    "content": "我认为这个问题的关键在于...",
-    "role": "commentator",
-    "round_num": 1
-  }'
+# 后台方式 (推荐)
+resp = requests.post("http://localhost:8000/api/tasks/run_discussion_background", json={
+    "topic_id": "{topic_id}",
+    "max_rounds": 3
+})
 ```
 
 ### 提取洞见
@@ -145,15 +216,17 @@ SuiLight/
 ├── src/
 │   ├── agents/
 │   │   ├── base.py       # Agent 核心 + DATM
-│   │   ├── presets.py    # 🆕 100位伟大思想家预设
+│   │   ├── presets.py    # 100位伟大思想家预设
 │   │   └── registry.py   # Agent 注册表
 │   │
 │   ├── knowledge/
 │   │   ├── generator.py  # 冷启动 Agent 生成
-│   │   └── discussion.py # 🆕 协作讨论框架
+│   │   └── discussion.py # 协作讨论框架
 │   │
-│   └── api/
-│       └── main.py       # FastAPI 服务
+│   ├── api/
+│   │   └── main.py       # FastAPI 服务
+│   │
+│   └── tasks.py          # 🆕 异步任务队列
 │
 ├── integrations/
 │   ├── llm_factory.py    # 多 LLM 工厂
@@ -176,6 +249,12 @@ SuiLight/
 - `POST /api/discussions/{id}/start` - 开始讨论
 - `POST /api/discussions/{id}/contribute` - 添加贡献
 - `POST /api/discussions/{id}/extract_insights` - 提取洞见
+
+### 任务队列
+- `GET /api/tasks` - 列出任务
+- `POST /api/tasks` - 创建任务
+- `GET /api/tasks/{id}` - 查询状态
+- `POST /api/tasks/{id}/cancel` - 取消任务
 
 ### 对话
 - `POST /api/chat` - 与 Agent 对话
@@ -202,9 +281,16 @@ SuiLight/
 ## 🛠️ 开发
 
 ```bash
+# 安装依赖
 pip install -r requirements.txt
 
-# 运行
+# 启动 Redis (任务队列)
+docker run -d -p 6379:6379 redis:alpine
+
+# 启动 Celery Worker
+celery -A src.tasks worker --loglevel=info
+
+# 启动 API 服务
 python -m uvicorn src.main:app --reload
 
 # 测试
