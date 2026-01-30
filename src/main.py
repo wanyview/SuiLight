@@ -1581,9 +1581,9 @@ async def generate_from_extended_template(
 async def generate_crossdisciplinary_capsule(
     title: str,
     domains: List[str],
-    depth: str = "intermediate",
     core_question: str,
-    insights: Dict
+    insights: Dict,
+    depth: str = "intermediate"
 ):
     """生成跨学科胶囊"""
     from src.knowledge.extended_templates import extended_template_manager
@@ -1633,6 +1633,116 @@ async def generate_crossdisciplinary_capsule(
             "capsule": saved_capsule,
             "domains": domains,
             "cross_type": True
+        }
+    }
+
+
+# ============ 三设机制 API ============
+
+@app.get("/api/three-set/stats")
+async def get_three_set_stats():
+    """获取三设统计"""
+    from src.knowledge.three_set import three_set_manager
+    
+    stats = three_set_manager.get_stats()
+    
+    return {
+        "success": True,
+        "data": stats
+    }
+
+
+@app.get("/api/three-set/thinkers")
+async def list_thinkers(field: str = None, era: str = None):
+    """列出思想家"""
+    from src.knowledge.three_set import three_set_manager
+    
+    thinkers = three_set_manager.list_thinkers(field=field, era=era)
+    
+    return {
+        "success": True,
+        "data": {
+            "count": len(thinkers),
+            "thinkers": thinkers
+        }
+    }
+
+
+@app.get("/api/three-set/thinkers/{name}")
+async def get_thinker(name: str):
+    """获取思想家详情"""
+    from src.knowledge.three_set import three_set_manager
+    
+    profile = three_set_manager.get_thinker(name)
+    if not profile:
+        raise HTTPException(status_code=404, detail="思想家不存在")
+    
+    return {
+        "success": True,
+        "data": profile.to_dict()
+    }
+
+
+@app.post("/api/three-set/thinkers/{name}/respond")
+async def generate_thinker_response(
+    name: str,
+    topic: str,
+    style: str = "dialogue"
+):
+    """生成思想家风格的回复"""
+    from src.knowledge.three_set import three_set_manager
+    
+    response = three_set_manager.generate_thinker_response(name, topic, style)
+    
+    return {
+        "success": True,
+        "data": {
+            "thinker": name,
+            "topic": topic,
+            "style": style,
+            "response": response
+        }
+    }
+
+
+@app.get("/api/three-set/demo/discussion")
+async def demo_discussion(topic: str = "AI是否会产生意识"):
+    """演示：多思想家讨论"""
+    from src.knowledge.three_set import three_set_manager
+    
+    thinkers = ["图灵", "康德", "尼采", "霍金"]
+    
+    responses = []
+    for name in thinkers:
+        response = three_set_manager.generate_thinker_response(name, topic)
+        responses.append({
+            "thinker": name,
+            "response": response
+        })
+    
+    return {
+        "success": True,
+        "data": {
+            "topic": topic,
+            "responses": responses
+        }
+    }
+
+
+@app.get("/api/three-set/demo/verification")
+async def demo_verification(thought_title: str = "自然选择"):
+    """演示：思想验证"""
+    return {
+        "success": True,
+        "data": {
+            "thought": thought_title,
+            "primary_thinker": "达尔文",
+            "supporters": ["华莱士", "道金斯"],
+            "experiments": [
+                {"title": "加拉帕戈斯雀鸟研究", "type": "case_study", "result": "支持自然选择"},
+                {"title": "抗生素抗性实验", "type": "data", "result": "支持自然选择"}
+            ],
+            "verification_result": "strong"
         }
     }
 
