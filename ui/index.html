@@ -25,6 +25,7 @@
             <div class="flex gap-4 text-sm">
                 <button onclick="showTab('agents')" class="hover:text-indigo-200">🤖 思想家</button>
                 <button onclick="showTab('discussions')" class="hover:text-indigo-200">💬 讨论</button>
+                <button onclick="showTab('history')" class="hover:text-indigo-200">📚 历史</button>
                 <button onclick="showTab('tasks')" class="hover:text-indigo-200">⚡ 任务</button>
                 <button onclick="showTab('create')" class="hover:text-indigo-200">➕ 创建</button>
             </div>
@@ -85,6 +86,20 @@
             </div>
             <div id="discussions-list" class="space-y-4">
                 <!-- 讨论会动态插入 -->
+            </div>
+        </div>
+
+        <!-- Tab: 历史记录 -->
+        <div id="tab-history" class="tab-content hidden">
+            <div class="flex gap-4 mb-4">
+                <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                    🗑️ 清空历史
+                </button>
+                <input type="text" id="search-history" placeholder="搜索历史记录..." 
+                    class="flex-1 border rounded-lg px-4 py-2" onkeyup="searchHistory()">
+            </div>
+            <div id="history-list" class="space-y-3">
+                <!-- 历史记录会动态插入 -->
             </div>
         </div>
 
@@ -221,6 +236,11 @@
         function showTab(tabName) {
             document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
             document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            
+            // 切换到历史 Tab 时加载历史
+            if (tabName === 'history') {
+                loadHistory();
+            }
         }
 
         // 刷新所有数据
@@ -228,7 +248,8 @@
             await Promise.all([
                 loadAgents(),
                 loadDiscussions(),
-                loadTasks()
+                loadTasks(),
+                loadStats()
             ]);
         }
 
@@ -241,7 +262,6 @@
                 const agents = data.data.agents || {};
                 const agentList = Object.values(agents);
                 
-                document.getElementById('agent-count').textContent = agentList.length;
                 renderAgents(agentList);
             } catch (e) {
                 console.error('加载 Agent 失败:', e);
@@ -390,7 +410,6 @@
                 const data = await resp.json();
                 const topics = data.data || [];
                 
-                document.getElementById('discussion-count').textContent = topics.length;
                 renderDiscussions(topics);
             } catch (e) {
                 console.error('加载讨论失败:', e);
@@ -564,7 +583,6 @@
                 const data = await resp.json();
                 const tasks = data.data?.tasks || [];
                 
-                document.getElementById('task-count').textContent = tasks.length;
                 renderTasks(tasks);
 
                 // 自动刷新运行中的任务
@@ -650,6 +668,96 @@
                     card.style.display = cardDomain === domain ? 'block' : 'none';
                 }
             });
+        }
+
+        // ============ 历史记录相关 ============
+
+        async function loadHistory() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/history?limit=50`);
+                const data = await resp.json();
+                const history = data.data?.history || [];
+                renderHistory(history);
+            } catch (e) {
+                console.error('加载历史失败:', e);
+            }
+        }
+
+        function renderHistory(history) {
+            const list = document.getElementById('history-list');
+            if (history.length === 0) {
+                list.innerHTML = '<div class="text-gray-500 text-center py-8">暂无历史记录</div>';
+                return;
+            }
+            list.innerHTML = history.map(item => `
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-bold">${item.agent_name || 'Unknown'}</span>
+                            <span class="text-xs text-gray-500 ml-2">${formatTime(item.timestamp)}</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-sm">
+                        <div class="bg-gray-100 p-2 rounded mb-1"><strong>你:</strong> ${item.user_message}</div>
+                        <div class="bg-indigo-50 p-2 rounded"><strong>${item.agent_name || 'Agent'}:</strong> ${item.bot_response}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function searchHistory() {
+            const query = document.getElementById('search-history').value.trim();
+            if (!query) {
+                loadHistory();
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/history/search?query=${encodeURIComponent(query)}`);
+                const data = await resp.json();
+                const results = data.data?.results || [];
+                renderHistory(results);
+            } catch (e) {
+                console.error('搜索历史失败:', e);
+            }
+        }
+
+        async function clearHistory() {
+            if (!confirm('确定要清空所有对话历史吗？')) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
+                loadHistory();
+                loadStats();
+                alert('历史已清空');
+            } catch (e) {
+                console.error('清空历史失败:', e);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/stats`);
+                const data = await resp.json();
+                const stats = data.data || {};
+                
+                document.getElementById('agent-count').textContent = stats.agent_count || 0;
+                document.getElementById('discussion-count').textContent = stats.discussion_count || 0;
+                document.getElementById('chat-count').textContent = stats.storage_stats?.chat_count || 0;
+                document.getElementById('insight-count').textContent = stats.storage_stats?.insight_count || 0;
+            } catch (e) {
+                console.error('加载统计失败:', e);
+            }
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString('zh-CN');
+            } catch (e) {
+                return timestamp;
+            }
         }
     </script>
 </body>

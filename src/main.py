@@ -31,6 +31,7 @@ from src.knowledge.discussion import (
     get_great_discussions
 )
 from src.tasks import TaskManager, TaskStatus
+from src.storage import StorageManager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -40,6 +41,7 @@ registry = AgentRegistry()
 generator = AgentGenerator()
 discussion_manager = DiscussionManager(registry)
 task_manager = TaskManager()
+storage = StorageManager()
 
 # 注入依赖
 task_manager.set_registry(registry)
@@ -656,6 +658,94 @@ async def run_discussion_background(topic_id: str, max_rounds: int = 3):
             "task_id": task.task_id,
             "status": task.status.value,
             "message": f"正在后台运行讨论 ({max_rounds} 轮)..."
+        }
+    }
+
+
+# ============ 存储 API ============
+
+@app.get("/api/history")
+async def get_chat_history(agent_id: str = None, limit: int = 50, offset: int = 0):
+    """获取对话历史"""
+    history = storage.get_chat_history(agent_id=agent_id, limit=limit, offset=offset)
+    return {
+        "success": True,
+        "data": {
+            "count": len(history),
+            "history": history
+        }
+    }
+
+@app.get("/api/history/{agent_id}")
+async def get_agent_chat_history(agent_id: str, limit: int = 100):
+    """获取与指定 Agent 的对话历史"""
+    history = storage.get_chat_by_agent(agent_id)
+    history = history[:limit]
+    return {
+        "success": True,
+        "data": {
+            "agent_id": agent_id,
+            "count": len(history),
+            "history": history
+        }
+    }
+
+@app.get("/api/history/search")
+async def search_history(query: str, limit: int = 20):
+    """搜索对话历史"""
+    results = storage.search_chat(query, limit)
+    return {
+        "success": True,
+        "data": {
+            "query": query,
+            "count": len(results),
+            "results": results
+        }
+    }
+
+@app.delete("/api/history")
+async def clear_history(agent_id: str = None):
+    """清空对话历史"""
+    count = storage.clear_chat_history(agent_id)
+    return {
+        "success": True,
+        "message": f"已删除 {count} 条对话记录"
+    }
+
+@app.get("/api/discussions/history")
+async def get_discussions_history(limit: int = 50):
+    """获取讨论历史"""
+    discussions = storage.get_discussion_history(limit=limit)
+    return {
+        "success": True,
+        "data": {
+            "count": len(discussions),
+            "discussions": discussions
+        }
+    }
+
+@app.get("/api/insights")
+async def get_insights(topic_id: str = None, limit: int = 100):
+    """获取知识洞见"""
+    insights = storage.get_insights(topic_id, limit)
+    return {
+        "success": True,
+        "data": {
+            "count": len(insights),
+            "insights": insights
+        }
+    }
+
+@app.get("/api/stats")
+async def get_stats():
+    """获取统计信息"""
+    stats = storage.get_stats()
+    return {
+        "success": True,
+        "data": {
+            "storage_stats": stats,
+            "agent_count": len(registry.list_all()),
+            "discussion_count": len(discussion_manager.topics)
         }
     }
 

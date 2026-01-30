@@ -223,13 +223,14 @@ class Agent:
         """Mock 思考过程 (无 LLM 时使用)"""
         return f"【{self.config.name}】收到: {message}\n\n(配置 LLM 后可获得智能回复: Ollama/Groq/OpenAI/MiniMax)"
     
-    def chat(self, message: str, context: List[Dict] = None) -> str:
+    def chat(self, message: str, context: List[Dict] = None, save_to_storage: bool = True) -> str:
         """
         对话接口
         
         Args:
             message: 用户消息
             context: 对话上下文
+            save_to_storage: 是否保存到持久化存储
             
         Returns:
             Agent 回复
@@ -252,6 +253,20 @@ class Agent:
             "content": response,
             "timestamp": datetime.now().isoformat()
         })
+        
+        # 保存到持久化存储
+        if save_to_storage:
+            try:
+                from src.storage import storage
+                storage.save_chat(
+                    agent_id=self.id,
+                    agent_name=self.config.name,
+                    user_message=message,
+                    bot_response=response,
+                    metadata={"domain": self.config.domain}
+                )
+            except Exception as e:
+                logger.warning(f"保存对话到存储失败: {e}")
         
         self.status = AgentStatus.IDLE
         return response
