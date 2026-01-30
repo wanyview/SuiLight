@@ -12,6 +12,7 @@ SuiLight Knowledge Salon - API Server
 
 import os
 from fastapi import FastAPI, HTTPException, BackgroundTasks
+from fastapi.staticfiles import StaticFiles
 from fastapi.middleware.cors import CORSMiddleware
 from pydantic import BaseModel
 from typing import List, Optional, Dict
@@ -69,6 +70,14 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# 静态文件服务 (Web UI)
+ui_path = os.path.join(os.path.dirname(os.path.dirname(__file__)), "ui")
+if os.path.exists(ui_path):
+    app.mount("/ui", StaticFiles(directory=ui_path), name="ui")
+    logger.info(f"📱 Web UI 已挂载: /ui")
+
+# 首页重定向到 UI
 
 # ============ 数据模型 ============
 
@@ -129,23 +138,14 @@ class TaskType:
     CHAT_BATCH = "chat_batch"
 
 
+from fastapi.responses import RedirectResponse
+
 # ============ API 端点 ============
 
 @app.get("/")
 async def root():
-    return {
-        "name": "SuiLight Knowledge Salon",
-        "version": "1.0.0",
-        "status": "running",
-        "message": "知识沙龙多智能体系统已启动",
-        "features": [
-            "100位伟大思想家 Agent",
-            "多学科协作讨论",
-            "知识涌现与沉淀",
-            "多 LLM 支持",
-            "异步任务队列"
-        ]
-    }
+    """首页重定向到 Web UI"""
+    return RedirectResponse(url="/ui/index.html")
 
 @app.get("/health")
 async def health():
