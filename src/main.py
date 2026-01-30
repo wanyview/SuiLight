@@ -968,6 +968,226 @@ async def update_capsule_status(capsule_id: str, request: Request):
     }
 
 
+@app.patch("/api/capsules/{capsule_id}")
+async def update_capsule(capsule_id: str, request: Request):
+    """更新胶囊内容"""
+    body = await request.json()
+    
+    success = storage.update_capsule(capsule_id, body)
+    if not success:
+        raise HTTPException(status_code=404, detail="胶囊不存在")
+    
+    capsule = storage.get_capsule(capsule_id)
+    
+    return {
+        "success": True,
+        "data": capsule
+    }
+
+
+# ============ 胶囊版本控制 API ============
+
+@app.post("/api/capsules/{capsule_id}/versions")
+async def create_capsule_version(capsule_id: str, request: Request):
+    """创建新版本"""
+    from src.knowledge.capsule import CapsuleVersionManager
+    
+    body = await request.json()
+    
+    version_manager = CapsuleVersionManager(storage)
+    
+    try:
+        version = version_manager.create_version(
+            capsule_id=capsule_id,
+            changes=body.get("changes", "内容更新"),
+            editor=body.get("editor", "system")
+        )
+        
+        capsule = storage.get_capsule(capsule_id)
+        
+        return {
+            "success": True,
+            "data": {
+                "capsule": capsule,
+                "version": version
+            }
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+@app.get("/api/capsules/{capsule_id}/versions")
+async def get_capsule_versions(capsule_id: str):
+    """获取版本历史"""
+    from src.knowledge.capsule import CapsuleVersionManager
+    
+    version_manager = CapsuleVersionManager(storage)
+    history = version_manager.get_version_history(capsule_id)
+    
+    return {
+        "success": True,
+        "data": {
+            "capsule_id": capsule_id,
+            "versions": history
+        }
+    }
+
+
+@app.post("/api/capsules/{capsule_id}/rollback/{version}")
+async def rollback_capsule(capsule_id: str, version: int):
+    """回滚到指定版本"""
+    from src.knowledge.capsule import CapsuleVersionManager
+    
+    version_manager = CapsuleVersionManager(storage)
+    
+    try:
+        capsule = version_manager.rollback(capsule_id, version)
+        
+        # 保存回滚后的胶囊
+        capsule_data = capsule.to_dict()
+        capsule_data["quality_score"] = capsule.quality_score
+        capsule_data["grade"] = "C"
+        
+        storage.update_capsule(capsule_id, capsule_data)
+        
+        return {
+            "success": True,
+            "message": f"已回滚到版本 {version}",
+            "data": capsule.to_dict()
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ============ 胶囊模板 API ============
+
+@app.get("/api/templates")
+async def list_templates():
+    """列出所有模板"""
+    from src.knowledge.capsule import CapsuleTemplateManager
+    
+    template_manager = CapsuleTemplateManager()
+    templates = template_manager.list_templates()
+    
+    return {
+        "success": True,
+        "data": {
+            "count": len(templates),
+            "templates": templates
+        }
+    }
+
+
+@app.get("/api/templates/{template_id}")
+async def get_template(template_id: str):
+    """获取模板详情"""
+    from src.knowledge.capsule import CapsuleTemplateManager
+    
+    template_manager = CapsuleTemplateManager()
+    template = template_manager.get_template(template_id)
+    
+    if not template:
+        raise HTTPException(status_code=404, detail="模板不存在")
+    
+    return {
+        "success": True,
+        "data": template.to_dict()
+    }
+
+
+@app.post("/api/capsules/from_template")
+async def create_capsule_from_template(request: Request):
+    """从模板创建胶囊"""
+    from src.knowledge.capsule import CapsuleTemplateManager, CapsuleEvaluator
+    
+    body = await request.json()
+    
+    template_manager = CapsuleTemplateManager()
+    evaluator = CapsuleEvaluator()
+    
+    template_id = body.get("template_id", "discussion_output")
+    data = body.get("data", {})
+    participants = body.get("participants", [])
+    
+    try:
+        capsule = template_manager.apply_template(template_id, data, participants)
+        
+        # 评价胶囊
+        evaluation = evaluator.evaluate(capsule)
+        
+        # 准备存储数据
+        capsule_data = capsule.to_dict()
+        capsule_data["quality_score"] = capsule.quality_score
+        capsule_data["grade"] = evaluation["grade"]
+        
+        # 保存
+        capsule_id = storage.save_capsule(capsule_data)
+        saved_capsule = storage.get_capsule(capsule_id)
+        
+        return {
+            "success": True,
+            "data": {
+                "capsule": saved_capsule,
+                "evaluation": evaluation
+            }
+        }
+    except ValueError as e:
+        raise HTTPException(status_code=404, detail=str(e))
+
+
+# ============ 胶囊推荐 API ============
+
+@app.get("/api/capsules/{capsule_id}/similar")
+async def get_similar_capsules(capsule_id: str, limit: int = 5):
+    """获取相似胶囊"""
+    from src.knowledge.capsule import CapsuleRecommender
+    
+    recommender = CapsuleRecommender(storage)
+    capsules = recommender.get_similar_capsules(capsule_id, limit)
+    
+    return {
+        "success": True,
+        "data": {
+            "capsule_id": capsule_id,
+            "count": len(capsules),
+            "similar": capsules
+        }
+    }
+
+
+@app.get("/api/capsules/recommended")
+async def get_recommended_capsules(interests: str = None, limit: int = 5):
+    """获取推荐胶囊"""
+    from src.knowledge.capsule import CapsuleRecommender
+    
+    recommender = CapsuleRecommender(storage)
+    
+    user_interests = interests.split(",") if interests else None
+    capsules = recommender.get_recommended_for_user(user_interests, limit)
+    
+    return {
+        "success": True,
+        "data": {
+            "count": len(capsules),
+            "recommended": capsules
+        }
+    }
+
+
+@app.get("/api/capsules/trending")
+async def get_trending_capsules(limit: int = 10):
+    """获取热门胶囊"""
+    capsules = storage.get_top_capsules(limit=limit)
+    
+    return {
+        "success": True,
+        "data": {
+            "count": len(capsules),
+            "trending": capsules
+        }
+    }
+
+
 # ============ 启动 ============
 
 if __name__ == "__main__":

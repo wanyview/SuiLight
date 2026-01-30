@@ -486,7 +486,7 @@ class StorageManager:
         dimensions = capsule.get("dimensions", {})
         
         cursor.execute("""
-            INSERT INTO capsules
+            INSERT OR REPLACE INTO capsules
             (id, topic_id, title, summary, insight, evidence, action_items, questions,
              dimensions, dimensions_score, confidence, quality_score, grade,
              source_agents, keywords, category, status, version, parent_id, created_at, updated_at)
@@ -666,6 +666,57 @@ class StorageManager:
         cursor.execute("""
             UPDATE capsules SET status = ?, updated_at = ? WHERE id = ?
         """, (status, datetime.now().isoformat(), capsule_id))
+        
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        
+        return success
+    
+    def update_capsule_version(self, capsule_id: str, version: int) -> bool:
+        """更新胶囊版本"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        cursor.execute("""
+            UPDATE capsules SET version = ?, updated_at = ? WHERE id = ?
+        """, (version, datetime.now().isoformat(), capsule_id))
+        
+        success = cursor.rowcount > 0
+        conn.commit()
+        conn.close()
+        
+        return success
+    
+    def update_capsule(self, capsule_id: str, updates: Dict) -> bool:
+        """更新胶囊内容"""
+        conn = sqlite3.connect(self.db_path)
+        cursor = conn.cursor()
+        
+        # 构建更新语句
+        set_clauses = []
+        params = []
+        
+        for key, value in updates.items():
+            if key in ["evidence", "action_items", "questions", "source_agents", "keywords"]:
+                set_clauses.append(f"{key} = ?")
+                params.append(json.dumps(value))
+            elif key == "dimensions":
+                set_clauses.append(f"{key} = ?")
+                params.append(json.dumps(value))
+            else:
+                set_clauses.append(f"{key} = ?")
+                params.append(value)
+        
+        if not set_clauses:
+            return False
+        
+        set_clauses.append("updated_at = ?")
+        params.append(datetime.now().isoformat())
+        params.append(capsule_id)
+        
+        query = f"UPDATE capsules SET {', '.join(set_clauses)} WHERE id = ?"
+        cursor.execute(query, params)
         
         success = cursor.rowcount > 0
         conn.commit()
