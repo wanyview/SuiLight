@@ -1,0 +1,26 @@
+{
+  "$schema": "https://openapi.vercel.sh/2.0.json",
+  "name": "suilight-knowledge-salon",
+  "version": 2,
+  "framework": "openapi",
+  "buildCommand": "pip install -r requirements.txt",
+  "devCommand": "python3 -m uvicorn src.main:app --host 0.0.0.0 --port 8000",
+  "installCommand": "pip install -r requirements.txt",
+  "regions": ["iad1"],
+  "functions": {
+    "api/**/*.py": {
+      "runtime": "python3.11",
+      "maxDuration": 30
+    }
+  },
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "/api/index.py"
+    }
+  ],
+  "env": {
+    "LLM_PROVIDER": "mock"
+  },
+  "outputDirectory": "ui"
+}

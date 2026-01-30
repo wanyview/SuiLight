@@ -760,5 +760,22 @@
             }
         }
     </script>
+    <script>
+        // API 配置 - 自动检测部署环境
+        const API_BASE = (() => {
+            // Vercel 部署时，API 在同一域名下
+            if (window.location.hostname.includes('vercel.app') || 
+                window.location.hostname.includes('vercel')) {
+                return '';  // 同源
+            }
+            // 本地开发
+            return 'http://localhost:8000';
+        })();
+
+        // 如果需要手动配置，取消注释下面这行:
+        // const API_BASE = 'https://your-api-domain.vercel.app';
+        
+        console.log('API Base:', API_BASE || '(同源)');
+    </script>
 </body>
 </html>
