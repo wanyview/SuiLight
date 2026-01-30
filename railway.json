@@ -1,0 +1,18 @@
+{
+  "name": "suilight-knowledge-salon",
+  "description": "Multi-agent knowledge collaboration platform",
+  "repository": "https://github.com/wanyview/SuiLight",
+  "keywords": ["python", "fastapi", "agents", "knowledge"],
+  "env": [],
+  "build": {
+    "cmd": "pip install -r requirements.txt"
+  },
+  "start": "python3 -m uvicorn src.main:app --host 0.0.0.0 --port $PORT",
+  "healthcheckPath": "/",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "dest": "src/main.py"
+    }
+  ]
+}
