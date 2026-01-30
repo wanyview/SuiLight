@@ -1,6 +1,12 @@
 """
 SuiLight Knowledge Salon - API Server
 知识沙龙多智能体系统 API 服务
+
+功能:
+- Agent 管理 (创建、对话、学习)
+- 预设伟大思想家 (100位专家)
+- 协作讨论框架
+- 知识沉淀
 """
 
 import os
@@ -13,8 +19,15 @@ import logging
 
 # 导入 Agent 框架
 from src.agents.base import Agent, AgentConfig, DATM, AgentRegistry, AgentMessage
+from src.agents.presets import (
+    GREAT_MINDS, create_agent_configs, get_domains, 
+    get_category_distribution, search_agents
+)
 from src.knowledge.generator import KnowledgeParser, AgentGenerator
-from integrations.minimax.client import create_minimax_client, MiniMaxClient
+from src.knowledge.discussion import (
+    DiscussionManager, DiscussionPhase,
+    get_great_discussions
+)
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -22,19 +35,20 @@ logger = logging.getLogger(__name__)
 # 初始化
 registry = AgentRegistry()
 generator = AgentGenerator()
-minimax_client = create_minimax_client()
+discussion_manager = DiscussionManager(registry)
 
 # FastAPI 应用
 @asynccontextmanager
 async def lifespan(app: FastAPI):
     logger.info("🚀 SuiLight Knowledge Salon 启动")
-    logger.info("📚 多智能体知识沙龙系统")
+    logger.info("📚 100位伟大思想家知识沙龙")
+    logger.info(f"🧠 当前注册 Agent: {len(registry.list_all())} 位")
     yield
     logger.info("👋 服务关闭")
 
 app = FastAPI(
     title="SuiLight Knowledge Salon API",
-    description="知识沙龙多智能体系统 API",
+    description="知识沙龙多智能体系统 API - 100位伟大思想家的协作讨论平台",
     version="1.0.0",
     lifespan=lifespan
 )
@@ -75,8 +89,23 @@ class CollaborateRequest(BaseModel):
 class UploadKnowledgeRequest(BaseModel):
     agent_name: str
     domain: str
-    files: List[str]  # 文件路径列表
+    files: List[str]
     datm: Optional[Dict[str, int]] = None
+
+class CreateTopicRequest(BaseModel):
+    title: str
+    description: str
+    category: str = "交叉科学"
+    target_level: str = "discovery"
+    keywords: List[str] = []
+    max_participants: int = 5
+    max_rounds: int = 3
+
+class AddContributionRequest(BaseModel):
+    agent_id: str
+    content: str
+    role: str = "commentator"
+    round_num: int = 1
 
 # ============ API 端点 ============
 
@@ -86,14 +115,20 @@ async def root():
         "name": "SuiLight Knowledge Salon",
         "version": "1.0.0",
         "status": "running",
-        "message": "知识沙龙多智能体系统已启动"
+        "message": "知识沙龙多智能体系统已启动",
+        "features": [
+            "100位伟大思想家 Agent",
+            "多学科协作讨论",
+            "知识涌现与沉淀",
+            "多 LLM 支持"
+        ]
     }
 
 @app.get("/health")
 async def health():
     return {"status": "healthy"}
 
-# Agent 管理
+# ============ Agent 管理 ============
 
 @app.get("/api/agents")
 async def list_agents():
@@ -146,7 +181,111 @@ async def delete_agent(agent_id: str):
     
     return {"success": True}
 
-# 对话接口
+# ============ 预设 Agent ============
+
+@app.get("/api/presets")
+async def list_presets():
+    """列出所有预设 Agent"""
+    return {
+        "success": True,
+        "data": {
+            "total": len(GREAT_MINDS),
+            "domains": get_domains(),
+            "distribution": get_category_distribution()
+        }
+    }
+
+@app.get("/api/presets/great_minds")
+async def get_great_minds(domain: str = None, search: str = None):
+    """获取伟大思想家列表"""
+    if search:
+        # 搜索
+        from src.agents.presets import GREAT_MINDS
+        results = {}
+        for name, info in GREAT_MINDS.items():
+            if search.lower() in name.lower():
+                results[name] = info
+        return {
+            "success": True,
+            "data": {"count": len(results), "results": results}
+        }
+    
+    if domain:
+        from src.agents.presets import GREAT_MINDS
+        results = {}
+        for name, info in GREAT_MINDS.items():
+            if info["domain"] == domain:
+                results[name] = info
+        return {
+            "success": True,
+            "data": {"count": len(results), "results": results}
+        }
+    
+    return {
+        "success": True,
+        "data": {
+            "total": len(GREAT_MINDS),
+            "presets": GREAT_MINDS
+        }
+    }
+
+@app.post("/api/presets/create")
+async def create_from_preset(names: List[str]):
+    """从预设创建 Agent"""
+    created = []
+    
+    for name in names:
+        if name not in GREAT_MINDS:
+            continue
+        
+        info = GREAT_MINDS[name]
+        datm = DATM.from_dict(info.get("datm", {}))
+        
+        config = AgentConfig(
+            name=name,
+            domain=info["domain"],
+            description=info["description"],
+            expertise=info["expertise"],
+            datm=datm
+        )
+        
+        agent = Agent(config)
+        registry.register(agent)
+        created.append(agent.to_dict())
+    
+    return {
+        "success": True,
+        "data": {
+            "created": len(created),
+            "agents": created
+        }
+    }
+
+@app.post("/api/presets/create_all")
+async def create_all_presets(domain: str = None, limit: int = 50):
+    """批量创建预设 Agent"""
+    configs = create_agent_configs()
+    
+    if domain:
+        configs = [c for c in configs if c.domain == domain]
+    
+    configs = configs[:limit]
+    
+    created = []
+    for config in configs:
+        agent = Agent(config)
+        registry.register(agent)
+        created.append(agent.to_dict())
+    
+    return {
+        "success": True,
+        "data": {
+            "created": len(created),
+            "agents": created
+        }
+    }
+
+# ============ 对话接口 ============
 
 @app.post("/api/chat")
 async def chat(request: ChatRequest):
@@ -205,12 +344,124 @@ async def collaborate(request: CollaborateRequest):
         }
     }
 
-# 知识上传
+# ============ 讨论系统 ============
+
+@app.get("/api/discussions")
+async def list_discussions(status: str = None):
+    """列出讨论"""
+    return {
+        "success": True,
+        "data": discussion_manager.list_topics(status)
+    }
+
+@app.post("/api/discussions")
+async def create_discussion(request: CreateTopicRequest):
+    """创建讨论议题"""
+    topic = discussion_manager.create_topic(
+        title=request.title,
+        description=request.description,
+        category=request.category,
+        target_level=request.target_level,
+        keywords=request.keywords,
+        max_participants=request.max_participants,
+        max_rounds=request.max_rounds
+    )
+    
+    return {
+        "success": True,
+        "data": topic.to_dict()
+    }
+
+@app.get("/api/discussions/suggestions")
+async def get_discussion_suggestions(category: str = None, count: int = 5):
+    """获取讨论建议"""
+    suggestions = discussion_manager.suggest_topics(category, count)
+    return {
+        "success": True,
+        "data": suggestions
+    }
+
+@app.get("/api/discussions/great_discussions")
+async def get_great_discussions():
+    """获取预设的伟大讨论"""
+    return {
+        "success": True,
+        "data": get_great_discussions()
+    }
+
+@app.post("/api/discussions/{topic_id}/start")
+async def start_discussion(topic_id: str):
+    """开始讨论"""
+    result = discussion_manager.start_discussion(topic_id)
+    return {
+        "success": True,
+        "data": result
+    }
+
+@app.post("/api/discussions/{topic_id}/assign")
+async def assign_participants(topic_id: str, agent_ids: List[str] = None):
+    """分配参与者"""
+    participants = discussion_manager.assign_participants(
+        topic_id=topic_id,
+        agent_ids=agent_ids,
+        auto_assign=not agent_ids
+    )
+    
+    return {
+        "success": True,
+        "data": {
+            "participants": [p.config.name for p in participants]
+        }
+    }
+
+@app.post("/api/discussions/{topic_id}/contribute")
+async def add_contribution(topic_id: str, request: AddContributionRequest):
+    """添加讨论贡献"""
+    contribution = discussion_manager.add_contribution(
+        topic_id=topic_id,
+        agent_id=request.agent_id,
+        content=request.content,
+        role=request.role,
+        round_num=request.round_num
+    )
+    
+    return {
+        "success": True,
+        "data": contribution.to_dict()
+    }
+
+@app.post("/api/discussions/{topic_id}/next_phase")
+async def next_phase(topic_id: str):
+    """推进讨论阶段"""
+    result = discussion_manager.next_phase(topic_id)
+    return {
+        "success": True,
+        "data": result
+    }
+
+@app.post("/api/discussions/{topic_id}/extract_insights")
+async def extract_insights(topic_id: str):
+    """从讨论中提取洞见"""
+    insights = discussion_manager.extract_insights(topic_id)
+    return {
+        "success": True,
+        "data": [i.to_dict() for i in insights]
+    }
+
+@app.get("/api/discussions/{topic_id}/summary")
+async def get_discussion_summary(topic_id: str):
+    """获取讨论摘要"""
+    summary = discussion_manager.get_topic_summary(topic_id)
+    return {
+        "success": True,
+        "data": summary
+    }
+
+# ============ 知识上传 ============
 
 @app.post("/api/upload-knowledge")
 async def upload_knowledge(request: UploadKnowledgeRequest):
     """从文件创建 Agent"""
-    # 生成 Agent
     agent = generator.generate_from_files(
         name=request.agent_name,
         domain=request.domain,
@@ -218,7 +469,6 @@ async def upload_knowledge(request: UploadKnowledgeRequest):
         datm_config=request.datm
     )
     
-    # 注册
     registry.register(agent)
     
     return {
@@ -229,7 +479,7 @@ async def upload_knowledge(request: UploadKnowledgeRequest):
         }
     }
 
-# DATM 可视化
+# ============ DATM 可视化 ============
 
 @app.get("/api/agents/{agent_id}/datm")
 async def get_agent_datm(agent_id: str):
@@ -243,7 +493,7 @@ async def get_agent_datm(agent_id: str):
         "data": agent.config.datm.to_radar_data()
     }
 
-# 搜索
+# ============ 搜索 ============
 
 @app.get("/api/search")
 async def search_agents(domain: str = None, topic: str = None):
