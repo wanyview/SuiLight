@@ -38,6 +38,7 @@ from src.knowledge.capsule import (
 from src.tasks import TaskManager, TaskStatus
 from src.storage import StorageManager
 from src.coffee import coffee_manager
+from src.share import share_manager
 
 logging.basicConfig(level=logging.INFO)
 logger = logging.getLogger(__name__)
@@ -1251,6 +1252,108 @@ async def get_coffee_stats():
     return {
         "success": True,
         "data": coffee_manager.get_stats()
+    }
+
+
+# ============ 知识分享 API ============
+
+@app.post("/api/share/links")
+async def create_share_link(
+    capsule_id: str,
+    title: str,
+    content: str = "",
+    format: str = "link"
+):
+    """创建分享链接"""
+    share = share_manager.create_share_link(
+        capsule_id=capsule_id,
+        title=title,
+        content=content,
+        format=format
+    )
+    
+    share_url = f"https://suilight.vercel.app/share/{share.short_id}"
+    
+    return {
+        "success": True,
+        "data": {
+            "share_id": share.id,
+            "short_id": share.short_id,
+            "share_url": share_url,
+            "view_count": share.view_count
+        }
+    }
+
+
+@app.get("/api/share/links/{share_id}")
+async def get_share_link(share_id: str):
+    """获取分享链接详情"""
+    share = share_manager.get_share_link(share_id)
+    if not share:
+        raise HTTPException(status_code=404, detail="分享链接不存在")
+    
+    return {
+        "success": True,
+        "data": {
+            "short_id": share.short_id,
+            "title": share.title,
+            "view_count": share.view_count,
+            "share_url": f"https://suilight.vercel.app/share/{share.short_id}"
+        }
+    }
+
+
+@app.get("/api/share/links/{share_id}/embed")
+async def get_embed_code(share_id: str, width: str = "400px", height: str = "600px"):
+    """获取嵌入代码"""
+    code = share_manager.generate_embed_code(share_id, width, height)
+    if not code:
+        raise HTTPException(status_code=404, detail="分享链接不存在")
+    
+    return {
+        "success": True,
+        "data": {
+            "embed_code": code
+        }
+    }
+
+
+@app.get("/api/share/stats")
+async def get_share_stats():
+    """获取分享统计"""
+    return {
+        "success": True,
+        "data": share_manager.get_stats()
+    }
+
+
+@app.get("/api/share/export/html")
+async def export_html(
+    title: str,
+    insight: str = "",
+    evidence: str = "",  # comma-separated
+    action_items: str = ""
+):
+    """导出为 HTML"""
+    capsule = {
+        "title": title,
+        "insight": insight,
+        "evidence": evidence.split(",") if evidence else [],
+        "action_items": action_items.split(",") if action_items else [],
+        "dimensions": {"truth": 70, "goodness": 65, "beauty": 60, "intelligence": 75},
+        "quality_score": 67,
+        "grade": "B",
+        "id": "export"
+    }
+    
+    html = share_manager.export_to_html(capsule)
+    
+    return {
+        "success": True,
+        "data": {
+            "html": html,
+            "filename": f"{title[:20]}.html"
+        }
     }
 
 
