@@ -216,6 +216,90 @@ def main():
     if newton_result:
         set_featured_capsule(newton_result["id"], "SuiLight 限定主题讨论首发")
     
+    # 推送2026前瞻胶囊
+    print("\n📦 胶囊 3: 2026年前瞻 - AI能否发现科学定律")
+    futures_result = push_capsule_to_capsulehub(FUTURES_CAPSULE)
+    if futures_result:
+        set_featured_capsule(futures_result["id"], "SuiLight 开放主题讨论首发")
+    
+    print("\n" + "="*60)
+    print("✅ 推送完成！")
+    print("="*60)
+    print("\n访问 CapsuleHub 查看:")
+    print(f"  {CAPSULEHUB_URL}/")
+    print("="*60 + "\n")
+
+
+if __name__ == "__main__":
+    main()
+
+
+# 2026年前瞻胶囊数据
+FUTURES_CAPSULE = {
+    "title": "2026年前瞻：AI能否自主发现科学定律？",
+    "summary": "基于2026年技术背景，探讨AI在科学发现中的角色与潜力",
+    "insight": """基于2026年AI发展水平，本次讨论得出以下核心结论：
+
+1. AI的当前能力：在模式识别、数据分析、假设验证方面超越人类；在概念迁移、范式转换方面仍有局限
+
+2. AI的独特优势：发现隐藏的相关性（粒子物理异常）、自动化实验流程、大规模数据挖掘
+
+3. 核心共识：AI正在成为科学发现的加速器，而非替代者。人类+AI协作模式将主导未来
+
+4. 未来预测：
+   - 短期（5年）：AI辅助假设生成和实验设计
+   - 中期（10年）：AI在药物、材料、数学猜想领域实现渐进式发现
+   - 长期：范式转换级别的突破可能仍需人类智慧
+
+5. 待解决问题：AI能否提出正确的问题？什么是理解的本质？""",
+    "evidence": [
+        "AlphaFold预测2亿种蛋白质结构",
+        "AlphaGeometry解决IMO几何问题",
+        "机器人科学家自动提出假设、设计实验、分析结果",
+        "GPT-4展示跨领域推理和概念迁移能力",
+        "AI在粒子物理数据分析中发现人类忽略的微小异常"
+    ],
+    "action_items": [
+        "建立AI辅助科学发现的评估框架（假设生成、实验设计、结果解释）",
+        "发展人机协作的新科学方法论",
+        "探索AI在基础科学研究中的新应用场景",
+        "研究与理解的本质差异",
+        "培养兼具AI技能和领域专长的新一代科学家"
+    ],
+    "keywords": ["AI", "科学发现", "自动化科学", "人机协作", "未来预测"],
+    "source_agents": ["AI研究员", "科学哲学家", "理论物理学家", "计算生物学家", "认知科学家", "AI工程师"],
+    "category": "AI",
+    "dimensions": {
+        "truth_score": 88,
+        "goodness_score": 92,
+        "beauty_score": 80,
+        "intelligence_score": 90
+    }
+
+def main():
+    """主流程"""
+    print("\n" + "🚀" * 20)
+    print("SuiLight → CapsuleHub 推送工具")
+    print("🚀" * 20 + "\n")
+    
+    # 推送爱迪生胶囊
+    print("\n📦 胶囊 1: 爱迪生发明电灯泡")
+    edison_result = push_capsule_to_capsulehub(EDISON_CAPSULE)
+    if edison_result:
+        set_featured_capsule(edison_result["id"], "SuiLight 限定主题讨论首发")
+    
+    # 推送牛顿胶囊
+    print("\n📦 胶囊 2: 牛顿发现万有引力")
+    newton_result = push_capsule_to_capsulehub(NEWTON_CAPSULE)
+    if newton_result:
+        set_featured_capsule(newton_result["id"], "SuiLight 限定主题讨论首发")
+    
+    # 推送2026前瞻胶囊
+    print("\n📦 胶囊 3: 2026年前瞻 - AI能否发现科学定律")
+    futures_result = push_capsule_to_capsulehub(FUTURES_CAPSULE)
+    if futures_result:
+        set_featured_capsule(futures_result["id"], "SuiLight 开放主题讨论首发")
+    
     print("\n" + "="*60)
     print("✅ 推送完成！")
     print("="*60)
