@@ -16,6 +16,7 @@ from .agent_config import (
     agent_config_storage,
     AgentConfiguration,
     AgentConfig,
+    AgentRole,
     OrchestrationConfig,
     AGENT_TEMPLATES
 )
@@ -44,6 +45,7 @@ __all__ = [
     "agent_config_storage",
     "AgentConfiguration",
     "AgentConfig",
+    "AgentRole",
     "OrchestrationConfig",
     "AGENT_TEMPLATES",
     
