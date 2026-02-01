@@ -1,0 +1,19 @@
+{
+  "$schema": "https://openapi.vercel.sh/2.0.json",
+  "name": "suilight-knowledge-salon",
+  "version": 2,
+  "framework": "static",
+  "buildCommand": "echo 'Static site - no build required'",
+  "devCommand": "python3 -m http.server 8080 -d ui",
+  "installCommand": "echo 'No dependencies needed'",
+  "regions": ["iad1"],
+  "outputDirectory": "ui",
+  "routes": [
+    {
+      "src": "/(.*)",
+      "headers": {
+        "Cache-Control": "public, max-age=0, must-revalidate"
+      }
+    }
+  ]
+}
