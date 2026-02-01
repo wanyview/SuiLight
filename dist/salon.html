@@ -1,0 +1,179 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识沙龙 🧠 - SuiLight</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- 导航 -->
+    <nav class="bg-white/10 backdrop-blur-md fixed w-full z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center text-white">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🧠</span>
+                <span class="font-bold text-xl">SuiLight 知识沙龙</span>
+            </div>
+            <div class="flex gap-4 text-sm">
+                <a href="/" class="hover:text-indigo-200">🏠 首页</a>
+                <a href="/?tab=agents" class="hover:text-indigo-200">🤖 思想家</a>
+                <span class="font-bold">🧠 知识沙龙</span>
+                <a href="/?tab=capsules" class="hover:text-indigo-200">📦 胶囊</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容 -->
+    <main class="pt-24 max-w-6xl mx-auto px-4 pb-12">
+        
+        <!-- 标题 -->
+        <div class="text-center text-white mb-12">
+            <div class="text-6xl mb-4">🧠</div>
+            <h1 class="text-4xl font-bold mb-2">知识沙龙</h1>
+            <p class="text-xl opacity-80">多元思想碰撞 · 知识胶囊产出</p>
+        </div>
+
+        <!-- 三步流程 -->
+        <div class="grid grid-cols-1 md:grid-cols-3 gap-6 mb-12">
+            <div class="bg-white/20 backdrop-blur rounded-2xl p-6 text-white text-center">
+                <div class="text-4xl mb-3">💡</div>
+                <h3 class="font-bold text-lg mb-2">1. 提出话题</h3>
+                <p class="text-sm opacity-80">选择讨论话题，邀请思想家参与</p>
+            </div>
+            <div class="bg-white/20 backdrop-blur rounded-2xl p-6 text-white text-center">
+                <div class="text-4xl mb-3">💬</div>
+                <h3 class="font-bold text-lg mb-2">2. 多元讨论</h3>
+                <p class="text-sm opacity-80">100位思想家多轮讨论，涌现智慧</p>
+            </div>
+            <div class="bg-white/20 backdrop-blur rounded-2xl p-6 text-white text-center">
+                <div class="text-4xl mb-3">📦</div>
+                <h3 class="font-bold text-lg mb-2">3. 产出胶囊</h3>
+                <p class="text-sm opacity-80">凝练讨论精华，生成可复用胶囊</p>
+            </div>
+        </div>
+
+        <!-- 发起讨论 -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6">🚀 发起知识沙龙</h2>
+            
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6 mb-6">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">讨论话题</label>
+                    <input type="text" id="salon-topic" placeholder="例如：AI 是否应该拥有自我意识？"
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">选择模式</label>
+                    <select id="salon-mode" class="w-full px-4 py-3 rounded-lg border border-gray-300">
+                        <option value="auto">🎲 自动选择 5 位思想家</option>
+                        <option value="ai">🤖 AI 治理专题</option>
+                        <option value="philosophy">🤔 哲学思辨</option>
+                        <option value="science">🔬 科学探索</option>
+                    </select>
+                </div>
+            </div>
+            
+            <textarea id="salon-desc" placeholder="详细描述问题背景..." 
+                class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 outline-none mb-6" rows="3"></textarea>
+            
+            <button onclick="createSalon()" class="bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-700 hover:to-purple-700 text-white px-8 py-3 rounded-full font-bold shadow-lg transition-all">
+                🎯 启动知识沙龙
+            </button>
+        </div>
+
+        <!-- 灵感卡片 -->
+        <div class="bg-gradient-to-r from-amber-400 to-orange-500 rounded-2xl shadow-xl p-8 mb-8 text-white">
+            <h2 class="text-xl font-bold mb-4 flex items-center gap-2">
+                <span>💡</span> 讨论灵感
+            </h2>
+            <div id="inspiration-container" class="text-center py-4">
+                <p class="text-xl">加载中...</p>
+            </div>
+            <div class="flex justify-center gap-4 mt-4">
+                <button onclick="getNewInspiration()" class="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-full font-bold">🔄 换一个</button>
+                <button onclick="useInspiration()" class="bg-white text-orange-500 px-6 py-2 rounded-full font-bold">📝 用这个话题</button>
+            </div>
+        </div>
+
+        <!-- 讨论列表 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+            <h2 class="text-xl font-bold text-gray-800 mb-4">📋 正在进行</h2>
+            <div id="salons-list" class="space-y-4">
+                <div class="text-center py-8 text-gray-400">
+                    <p>暂无知识沙龙，来发起一个吧！</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentInspiration = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInspiration();
+            loadSalons();
+        });
+
+        async function loadInspiration() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/inspiration`);
+                const data = await resp.json();
+                const container = document.getElementById('inspiration-container');
+                
+                if (data.data) {
+                    currentInspiration = data.data;
+                    container.innerHTML = `<p class="text-xl font-medium">"${data.data.content}"</p>`;
+                }
+            } catch (e) {
+                document.getElementById('inspiration-container').innerHTML = '<p>加载失败</p>';
+            }
+        }
+
+        function getNewInspiration() { loadInspiration(); }
+        
+        function useInspiration() {
+            if (currentInspiration) {
+                document.getElementById('salon-topic').value = currentInspiration.content;
+            }
+        }
+
+        function createSalon() {
+            const topic = document.getElementById('salon-topic').value.trim();
+            if (!topic) return alert('请输入讨论话题');
+            
+            alert('🎯 知识沙龙已启动！\n\n思想家们正在准备讨论...\n完成后自动生成知识胶囊。');
+            
+            document.getElementById('salon-topic').value = '';
+            document.getElementById('salon-desc').value = '';
+            loadSalons();
+        }
+
+        function loadSalons() {
+            const mockSalons = [
+                { id: '1', title: 'AI 是否应该拥有自我意识？', agents: 5, status: 'running' }
+            ];
+            
+            document.getElementById('salons-list').innerHTML = mockSalons.map(s => `
+                <div class="bg-gray-50 rounded-xl p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-gray-800">${s.title}</h4>
+                            <p class="text-sm text-gray-500 mt-1">🤖 ${s.agents} 位思想家 · 💬 ${s.status}</p>
+                        </div>
+                        <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-bold">进行中</span>
+                    </div>
+                    <div class="mt-4 flex gap-3">
+                        <button class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm">👀 围观</button>
+                        <button class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg text-sm">📦 胶囊</button>
+                    </div>
+                </div>
+            `).join('');
+        }
+    </script>
+</body>
+</html>

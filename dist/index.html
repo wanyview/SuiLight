@@ -1,0 +1,781 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>SuiLight 知识沙龙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+    <style>
+        .datm-radar { max-width: 400px; margin: 0 auto; }
+        .agent-card { transition: all 0.2s; }
+        .agent-card:hover { transform: translateY(-2px); box-shadow: 0 4px 12px rgba(0,0,0,0.15); }
+        .loading { animation: pulse 1.5s infinite; }
+        @keyframes pulse { 0%, 100% { opacity: 1; } 50% { opacity: 0.5; } }
+    </style>
+</head>
+<body class="bg-gray-50 min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-indigo-600 text-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <span class="text-2xl">🧠</span>
+                <h1 class="text-xl font-bold">SuiLight 知识沙龙</h1>
+            </div>
+            <div class="flex gap-4 text-sm">
+                <button onclick="showTab('agents')" class="hover:text-indigo-200">🤖 思想家</button>
+                <button onclick="showTab('discussions')" class="hover:text-indigo-200">💬 讨论</button>
+                <button onclick="showTab('history')" class="hover:text-indigo-200">📚 历史</button>
+                <button onclick="showTab('tasks')" class="hover:text-indigo-200">⚡ 任务</button>
+                <button onclick="showTab('create')" class="hover:text-indigo-200">➕ 创建</button>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主内容区 -->
+    <main class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- 状态栏 -->
+        <div id="status-bar" class="bg-white rounded-lg shadow p-4 mb-6 flex justify-between items-center">
+            <div class="flex gap-6 text-sm">
+                <span>🤖 Agent: <strong id="agent-count">0</strong></span>
+                <span>💬 讨论: <strong id="discussion-count">0</strong></span>
+                <span>⚡ 任务: <strong id="task-count">0</strong></span>
+            </div>
+            <div class="flex gap-2">
+                <button onclick="createAllAgents()" class="bg-indigo-500 hover:bg-indigo-600 text-white px-4 py-2 rounded text-sm">
+                    🚀 批量创建 100 位思想家
+                </button>
+                <button onclick="refreshAll()" class="bg-gray-500 hover:bg-gray-600 text-white px-4 py-2 rounded text-sm">
+                    🔄 刷新
+                </button>
+            </div>
+        </div>
+
+        <!-- Tab: 思想家列表 -->
+        <div id="tab-agents" class="tab-content">
+            <div class="flex gap-4 mb-4">
+                <input type="text" id="search-agent" placeholder="搜索思想家..." 
+                    class="flex-1 border rounded-lg px-4 py-2" onkeyup="searchAgents()">
+                <select id="filter-domain" class="border rounded-lg px-4 py-2" onchange="filterAgents()">
+                    <option value="">全部领域</option>
+                    <option value="physics">物理学</option>
+                    <option value="biology">生物学</option>
+                    <option value="chemistry">化学</option>
+                    <option value="mathematics">数学</option>
+                    <option value="economics">经济学</option>
+                    <option value="psychology">心理学</option>
+                    <option value="philosophy">哲学</option>
+                    <option value="interdisciplinary">交叉科学</option>
+                </select>
+            </div>
+            <div id="agents-grid" class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4">
+                <!-- Agent 卡片会动态插入 -->
+            </div>
+        </div>
+
+        <!-- Tab: 讨论列表 -->
+        <div id="tab-discussions" class="tab-content hidden">
+            <div class="flex gap-4 mb-4">
+                <button onclick="createDiscussion()" class="bg-green-500 hover:bg-green-600 text-white px-4 py-2 rounded">
+                    ➕ 创建讨论
+                </button>
+                <button onclick="loadGreatDiscussions()" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded">
+                    📖 加载伟大讨论
+                </button>
+            </div>
+            <div id="discussions-list" class="space-y-4">
+                <!-- 讨论会动态插入 -->
+            </div>
+        </div>
+
+        <!-- Tab: 历史记录 -->
+        <div id="tab-history" class="tab-content hidden">
+            <div class="flex gap-4 mb-4">
+                <button onclick="clearHistory()" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded">
+                    🗑️ 清空历史
+                </button>
+                <input type="text" id="search-history" placeholder="搜索历史记录..." 
+                    class="flex-1 border rounded-lg px-4 py-2" onkeyup="searchHistory()">
+            </div>
+            <div id="history-list" class="space-y-3">
+                <!-- 历史记录会动态插入 -->
+            </div>
+        </div>
+
+        <!-- Tab: 任务队列 -->
+        <div id="tab-tasks" class="tab-content hidden">
+            <div class="bg-white rounded-lg shadow p-4">
+                <h2 class="text-lg font-bold mb-4">⚡ 异步任务队列</h2>
+                <div id="tasks-list" class="space-y-3">
+                    <!-- 任务会动态插入 -->
+                </div>
+            </div>
+        </div>
+
+        <!-- Tab: 创建新内容 -->
+        <div id="tab-create" class="tab-content hidden">
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <!-- 创建 Agent -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-bold mb-4">🤖 创建 Agent</h2>
+                    <div class="space-y-3">
+                        <input type="text" id="new-agent-name" placeholder="名称" class="w-full border rounded px-3 py-2">
+                        <input type="text" id="new-agent-domain" placeholder="领域" class="w-full border rounded px-3 py-2">
+                        <textarea id="new-agent-desc" placeholder="描述" class="w-full border rounded px-3 py-2 h-24"></textarea>
+                        <button onclick="createNewAgent()" class="w-full bg-indigo-500 hover:bg-indigo-600 text-white py-2 rounded">
+                            创建
+                        </button>
+                    </div>
+                </div>
+
+                <!-- 创建讨论 -->
+                <div class="bg-white rounded-lg shadow p-6">
+                    <h2 class="text-lg font-bold mb-4">💬 创建讨论</h2>
+                    <div class="space-y-3">
+                        <input type="text" id="new-discussion-title" placeholder="讨论标题" class="w-full border rounded px-3 py-2">
+                        <textarea id="new-discussion-desc" placeholder="描述" class="w-full border rounded px-3 py-2 h-24"></textarea>
+                        <select id="new-discussion-category" class="w-full border rounded px-3 py-2">
+                            <option value="交叉科学">交叉科学</option>
+                            <option value="自然科学">自然科学</option>
+                            <option value="社会科学">社会科学</option>
+                            <option value="人文科学">人文科学</option>
+                        </select>
+                        <button onclick="createNewDiscussion()" class="w-full bg-green-500 hover:bg-green-600 text-white py-2 rounded">
+                            创建讨论
+                        </button>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模态框: Agent 详情 -->
+        <div id="modal-agent" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+            <div class="bg-white rounded-lg max-w-2xl w-full mx-4 max-h-90vh overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <h2 id="modal-agent-name" class="text-xl font-bold"></h2>
+                        <button onclick="closeModal('modal-agent')" class="text-gray-500 hover:text-gray-700">✕</button>
+                    </div>
+                    <p id="modal-agent-desc" class="text-gray-600 mb-4"></p>
+                    <div class="mb-4">
+                        <h3 class="font-bold mb-2">🧠 DATM 知识矩阵</h3>
+                        <canvas id="datm-radar" class="datm-radar"></canvas>
+                    </div>
+                    <div class="border-t pt-4">
+                        <h3 class="font-bold mb-2">💬 对话</h3>
+                        <div id="chat-history" class="bg-gray-100 rounded p-3 h-48 overflow-y-auto mb-2 text-sm"></div>
+                        <div class="flex gap-2">
+                            <input type="text" id="chat-input" placeholder="输入消息..." class="flex-1 border rounded px-3 py-2" onkeypress="if(event.key==='Enter')sendChat()">
+                            <button onclick="sendChat()" class="bg-indigo-500 text-white px-4 py-2 rounded">发送</button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- 模态框: 讨论详情 -->
+        <div id="modal-discussion" class="fixed inset-0 bg-black bg-opacity-50 hidden flex items-center justify-center">
+            <div class="bg-white rounded-lg max-w-3xl w-full mx-4 max-h-90vh overflow-y-auto">
+                <div class="p-6">
+                    <div class="flex justify-between items-start mb-4">
+                        <div>
+                            <h2 id="modal-discussion-title" class="text-xl font-bold"></h2>
+                            <p id="modal-discussion-desc" class="text-gray-600"></p>
+                        </div>
+                        <button onclick="closeModal('modal-discussion')" class="text-gray-500 hover:text-gray-700">✕</button>
+                    </div>
+                    
+                    <div class="mb-4 flex gap-2">
+                        <span id="modal-discussion-phase" class="bg-blue-100 text-blue-800 px-3 py-1 rounded-full text-sm"></span>
+                        <span id="modal-discussion-participants" class="bg-green-100 text-green-800 px-3 py-1 rounded-full text-sm"></span>
+                    </div>
+
+                    <!-- 参与者 -->
+                    <div class="mb-4">
+                        <h3 class="font-bold mb-2">👥 参与者</h3>
+                        <div id="modal-discussion-agents" class="flex flex-wrap gap-2"></div>
+                    </div>
+
+                    <!-- 贡献列表 -->
+                    <div class="border-t pt-4 mb-4">
+                        <h3 class="font-bold mb-2">💭 讨论内容</h3>
+                        <div id="modal-discussion-contributions" class="space-y-2 max-h-64 overflow-y-auto"></div>
+                    </div>
+
+                    <!-- 操作按钮 -->
+                    <div class="flex gap-2">
+                        <button onclick="startDiscussionFromModal()" class="bg-green-500 text-white px-4 py-2 rounded">▶️ 开始讨论</button>
+                        <button onclick="addContribution()" class="bg-blue-500 text-white px-4 py-2 rounded">💬 添加观点</button>
+                        <button onclick="extractInsightsFromModal()" class="bg-purple-500 text-white px-4 py-2 rounded">📚 提取洞见</button>
+                    </div>
+
+                    <!-- 洞见 -->
+                    <div id="modal-insights" class="border-t pt-4 mt-4 hidden">
+                        <h3 class="font-bold mb-2">💡 洞见</h3>
+                        <div id="modal-insights-list" class="space-y-2"></div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API_BASE = 'http://localhost:8000';
+        let currentAgentId = null;
+        let currentDiscussionId = null;
+        let datmChart = null;
+
+        // 初始化
+        document.addEventListener('DOMContentLoaded', () => {
+            refreshAll();
+        });
+
+        // Tab 切换
+        function showTab(tabName) {
+            document.querySelectorAll('.tab-content').forEach(el => el.classList.add('hidden'));
+            document.getElementById(`tab-${tabName}`).classList.remove('hidden');
+            
+            // 切换到历史 Tab 时加载历史
+            if (tabName === 'history') {
+                loadHistory();
+            }
+        }
+
+        // 刷新所有数据
+        async function refreshAll() {
+            await Promise.all([
+                loadAgents(),
+                loadDiscussions(),
+                loadTasks(),
+                loadStats()
+            ]);
+        }
+
+        // ============ Agent 相关 ============
+
+        async function loadAgents() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/agents`);
+                const data = await resp.json();
+                const agents = data.data.agents || {};
+                const agentList = Object.values(agents);
+                
+                renderAgents(agentList);
+            } catch (e) {
+                console.error('加载 Agent 失败:', e);
+            }
+        }
+
+        function renderAgents(agents) {
+            const grid = document.getElementById('agents-grid');
+            grid.innerHTML = agents.map(agent => `
+                <div class="agent-card bg-white rounded-lg shadow p-4 cursor-pointer" onclick="showAgentDetail('${agent.id}')">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold">${agent.name}</h3>
+                            <span class="text-xs bg-gray-100 px-2 py-1 rounded">${agent.domain}</span>
+                        </div>
+                        <span class="text-2xl">${getDomainEmoji(agent.domain)}</span>
+                    </div>
+                    <p class="text-sm text-gray-600 mt-2 line-clamp-2">${agent.description || ''}</p>
+                    <div class="mt-3 flex gap-2 text-xs">
+                        <span class="bg-blue-100 px-2 py-1 rounded">真: ${agent.datm?.truth || 50}</span>
+                        <span class="bg-green-100 px-2 py-1 rounded">善: ${agent.datm?.goodness || 50}</span>
+                        <span class="bg-pink-100 px-2 py-1 rounded">美: ${agent.datm?.beauty || 50}</span>
+                        <span class="bg-purple-100 px-2 py-1 rounded">灵: ${agent.datm?.intelligence || 50}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function showAgentDetail(agentId) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/agents/${agentId}`);
+                const data = await resp.json();
+                const agent = data.data;
+
+                currentAgentId = agentId;
+                document.getElementById('modal-agent-name').textContent = agent.name;
+                document.getElementById('modal-agent-desc').textContent = agent.description || '';
+                document.getElementById('chat-history').innerHTML = '<div class="text-gray-500">开始对话...</div>';
+                document.getElementById('modal-agent').classList.remove('hidden');
+
+                // 绘制 DATM
+                renderDATM(agent.datm);
+            } catch (e) {
+                console.error('获取 Agent 详情失败:', e);
+            }
+        }
+
+        function renderDATM(datm) {
+            const ctx = document.getElementById('datm-radar').getContext('2d');
+            
+            if (datmChart) datmChart.destroy();
+            
+            datmChart = new Chart(ctx, {
+                type: 'radar',
+                data: {
+                    labels: ['Truth (真)', 'Goodness (善)', 'Beauty (美)', 'Intelligence (灵)'],
+                    datasets: [{
+                        label: 'DATM',
+                        data: [datm?.truth || 50, datm?.goodness || 50, datm?.beauty || 50, datm?.intelligence || 50],
+                        backgroundColor: 'rgba(99, 102, 241, 0.2)',
+                        borderColor: 'rgba(99, 102, 241, 1)',
+                        pointBackgroundColor: 'rgba(99, 102, 241, 1)'
+                    }]
+                },
+                options: {
+                    scales: { r: { min: 0, max: 100 } }
+                }
+            });
+        }
+
+        async function sendChat() {
+            const input = document.getElementById('chat-input');
+            const message = input.value.trim();
+            if (!message || !currentAgentId) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/chat`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        agent_id: currentAgentId,
+                        message: message
+                    })
+                });
+                const data = await resp.json();
+
+                // 添加到历史
+                const history = document.getElementById('chat-history');
+                history.innerHTML += `
+                    <div class="mb-2"><strong>你:</strong> ${message}</div>
+                    <div class="mb-2"><strong>${data.data.agent_name}:</strong> ${data.data.response}</div>
+                `;
+                history.scrollTop = history.scrollHeight;
+                input.value = '';
+            } catch (e) {
+                console.error('发送消息失败:', e);
+            }
+        }
+
+        async function createNewAgent() {
+            const name = document.getElementById('new-agent-name').value;
+            const domain = document.getElementById('new-agent-domain').value;
+            const desc = document.getElementById('new-agent-desc').value;
+
+            if (!name || !domain) return alert('请填写名称和领域');
+
+            try {
+                await fetch(`${API_BASE}/api/agents`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        name: name,
+                        domain: domain,
+                        description: desc
+                    })
+                });
+                refreshAll();
+                showTab('agents');
+            } catch (e) {
+                console.error('创建 Agent 失败:', e);
+            }
+        }
+
+        async function createAllAgents() {
+            if (!confirm('确定要创建 100 位思想家吗？')) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/tasks/create_agents_background`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({ limit: 100 })
+                });
+                const data = await resp.json();
+                alert(`任务已提交: ${data.data.task_id}`);
+                showTab('tasks');
+            } catch (e) {
+                console.error('创建失败:', e);
+            }
+        }
+
+        // ============ Discussion 相关 ============
+
+        async function loadDiscussions() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/discussions`);
+                const data = await resp.json();
+                const topics = data.data || [];
+                
+                renderDiscussions(topics);
+            } catch (e) {
+                console.error('加载讨论失败:', e);
+            }
+        }
+
+        function renderDiscussions(topics) {
+            const list = document.getElementById('discussions-list');
+            list.innerHTML = topics.map(topic => `
+                <div class="bg-white rounded-lg shadow p-4 cursor-pointer hover:shadow-lg" onclick="showDiscussionDetail('${topic.id}')">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h3 class="font-bold">${topic.title}</h3>
+                            <p class="text-sm text-gray-600 mt-1">${topic.description}</p>
+                        </div>
+                        <span class="text-xs bg-gray-100 px-2 py-1 rounded">${topic.phase}</span>
+                    </div>
+                    <div class="mt-3 flex gap-2 text-xs">
+                        <span>👥 ${topic.participants?.length || 0} 人</span>
+                        <span>📁 ${topic.category}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function showDiscussionDetail(topicId) {
+            try {
+                const resp = await fetch(`${API_BASE}/api/discussions/${topicId}/summary`);
+                const data = await resp.json();
+                const summary = data.data;
+
+                currentDiscussionId = topicId;
+                document.getElementById('modal-discussion-title').textContent = summary.topic.title;
+                document.getElementById('modal-discussion-desc').textContent = summary.topic.description;
+                document.getElementById('modal-discussion-phase').textContent = summary.current_phase;
+                document.getElementById('modal-discussion-participants').textContent = `👥 ${summary.statistics.agents ? Object.keys(summary.statistics.agents).length : 0} 人`;
+
+                document.getElementById('modal-discussion').classList.remove('hidden');
+            } catch (e) {
+                console.error('获取讨论详情失败:', e);
+            }
+        }
+
+        async function createDiscussion() {
+            const title = document.getElementById('new-discussion-title').value;
+            const desc = document.getElementById('new-discussion-desc').value;
+            const category = document.getElementById('new-discussion-category').value;
+
+            if (!title) return alert('请填写标题');
+
+            try {
+                await fetch(`${API_BASE}/api/discussions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        title: title,
+                        description: desc,
+                        category: category
+                    })
+                });
+                refreshAll();
+                showTab('discussions');
+            } catch (e) {
+                console.error('创建讨论失败:', e);
+            }
+        }
+
+        async function loadGreatDiscussions() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/discussions/great_discussions`);
+                const data = await resp.json();
+                const discussions = data.data || [];
+
+                // 逐个创建
+                for (const d of discussions) {
+                    await fetch(`${API_BASE}/api/discussions`, {
+                        method: 'POST',
+                        headers: { 'Content-Type': 'application/json' },
+                        body: JSON.stringify({
+                            title: d.title,
+                            description: d.description,
+                            category: d.category,
+                            target_level: d.target_level,
+                            keywords: d.keywords
+                        })
+                    });
+                }
+                refreshAll();
+                alert(`已创建 ${discussions.length} 个讨论`);
+            } catch (e) {
+                console.error('加载失败:', e);
+            }
+        }
+
+        async function startDiscussionFromModal() {
+            if (!currentDiscussionId) return;
+
+            // 先分配参与者
+            await fetch(`${API_BASE}/api/discussions/${currentDiscussionId}/assign`, {
+                method: 'POST',
+                headers: { 'Content-Type': 'application/json' },
+                body: JSON.stringify({})
+            });
+
+            // 开始讨论
+            await fetch(`${API_BASE}/api/discussions/${currentDiscussionId}/start`, {
+                method: 'POST'
+            });
+
+            alert('讨论已开始');
+            loadDiscussions();
+        }
+
+        async function extractInsightsFromModal() {
+            if (!currentDiscussionId) return;
+
+            try {
+                const resp = await fetch(`${API_BASE}/api/discussions/${currentDiscussionId}/extract_insights`, {
+                    method: 'POST'
+                });
+                const data = await resp.json();
+                const insights = data.data || [];
+
+                const container = document.getElementById('modal-insights');
+                container.classList.remove('hidden');
+                document.getElementById('modal-insights-list').innerHTML = insights.map(i => `
+                    <div class="bg-purple-50 p-3 rounded">
+                        <span class="text-xs bg-purple-200 px-2 py-1 rounded">${i.insight_type}</span>
+                        <p class="mt-1">${i.content}</p>
+                    </div>
+                `).join('');
+            } catch (e) {
+                console.error('提取洞见失败:', e);
+            }
+        }
+
+        async function addContribution() {
+            const content = prompt('请输入你的观点:');
+            if (!content) return;
+
+            // 获取第一个 Agent
+            try {
+                const agentsResp = await fetch(`${API_BASE}/api/agents`);
+                const agentsData = await agentsResp.json();
+                const agents = agentsData.data.agents || {};
+                const agentIds = Object.keys(agents);
+                
+                if (agentIds.length === 0) return alert('没有 Agent');
+
+                await fetch(`${API_BASE}/api/discussions/${currentDiscussionId}/contribute`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        agent_id: agentIds[0],
+                        content: content,
+                        role: 'commentator',
+                        round_num: 1
+                    })
+                });
+                alert('已添加');
+            } catch (e) {
+                console.error('添加失败:', e);
+            }
+        }
+
+        // ============ Task 相关 ============
+
+        async function loadTasks() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/tasks`);
+                const data = await resp.json();
+                const tasks = data.data?.tasks || [];
+                
+                renderTasks(tasks);
+
+                // 自动刷新运行中的任务
+                tasks.filter(t => t.status === 'running').forEach(t => {
+                    setTimeout(loadTasks, 3000);
+                });
+            } catch (e) {
+                console.error('加载任务失败:', e);
+            }
+        }
+
+        function renderTasks(tasks) {
+            const list = document.getElementById('tasks-list');
+            list.innerHTML = tasks.map(task => `
+                <div class="flex items-center justify-between bg-gray-50 p-3 rounded">
+                    <div>
+                        <span class="font-bold">${task.task_type}</span>
+                        <span class="text-xs text-gray-500 ml-2">${task.task_id}</span>
+                    </div>
+                    <div class="flex items-center gap-3">
+                        <div class="w-32 bg-gray-200 rounded-full h-2">
+                            <div class="bg-indigo-500 h-2 rounded-full" style="width: ${task.progress}%"></div>
+                        </div>
+                        <span class="text-sm">${task.progress}%</span>
+                        <span class="text-xs px-2 py-1 rounded ${getStatusColor(task.status)}">${task.status}</span>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        function getStatusColor(status) {
+            const colors = {
+                'pending': 'bg-yellow-100',
+                'running': 'bg-blue-100',
+                'success': 'bg-green-100',
+                'failure': 'bg-red-100',
+                'cancelled': 'bg-gray-100'
+            };
+            return colors[status] || 'bg-gray-100';
+        }
+
+        // ============ 工具函数 ============
+
+        function getDomainEmoji(domain) {
+            const emojis = {
+                'physics': '⚛️',
+                'chemistry': '🧪',
+                'biology': '🧬',
+                'mathematics': '🔢',
+                'astronomy': '🌌',
+                'economics': '💰',
+                'psychology': '🧠',
+                'philosophy': '📜',
+                'art': '🎨',
+                'literature': '📚',
+                'engineering': '⚙️',
+                'medicine': '🏥',
+                'computer_science': '💻',
+                'interdisciplinary': '🌐'
+            };
+            return emojis[domain] || '📖';
+        }
+
+        function closeModal(modalId) {
+            document.getElementById(modalId).classList.add('hidden');
+        }
+
+        function searchAgents() {
+            const query = document.getElementById('search-agent').value.toLowerCase();
+            document.querySelectorAll('.agent-card').forEach(card => {
+                const name = card.querySelector('h3').textContent.toLowerCase();
+                card.style.display = name.includes(query) ? 'block' : 'none';
+            });
+        }
+
+        function filterAgents() {
+            const domain = document.getElementById('filter-domain').value;
+            document.querySelectorAll('.agent-card').forEach(card => {
+                if (!domain) {
+                    card.style.display = 'block';
+                } else {
+                    const cardDomain = card.querySelector('.bg-gray-100').textContent;
+                    card.style.display = cardDomain === domain ? 'block' : 'none';
+                }
+            });
+        }
+
+        // ============ 历史记录相关 ============
+
+        async function loadHistory() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/history?limit=50`);
+                const data = await resp.json();
+                const history = data.data?.history || [];
+                renderHistory(history);
+            } catch (e) {
+                console.error('加载历史失败:', e);
+            }
+        }
+
+        function renderHistory(history) {
+            const list = document.getElementById('history-list');
+            if (history.length === 0) {
+                list.innerHTML = '<div class="text-gray-500 text-center py-8">暂无历史记录</div>';
+                return;
+            }
+            list.innerHTML = history.map(item => `
+                <div class="bg-white rounded-lg shadow p-4">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <span class="font-bold">${item.agent_name || 'Unknown'}</span>
+                            <span class="text-xs text-gray-500 ml-2">${formatTime(item.timestamp)}</span>
+                        </div>
+                    </div>
+                    <div class="mt-2 text-sm">
+                        <div class="bg-gray-100 p-2 rounded mb-1"><strong>你:</strong> ${item.user_message}</div>
+                        <div class="bg-indigo-50 p-2 rounded"><strong>${item.agent_name || 'Agent'}:</strong> ${item.bot_response}</div>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function searchHistory() {
+            const query = document.getElementById('search-history').value.trim();
+            if (!query) {
+                loadHistory();
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/history/search?query=${encodeURIComponent(query)}`);
+                const data = await resp.json();
+                const results = data.data?.results || [];
+                renderHistory(results);
+            } catch (e) {
+                console.error('搜索历史失败:', e);
+            }
+        }
+
+        async function clearHistory() {
+            if (!confirm('确定要清空所有对话历史吗？')) return;
+            
+            try {
+                await fetch(`${API_BASE}/api/history`, { method: 'DELETE' });
+                loadHistory();
+                loadStats();
+                alert('历史已清空');
+            } catch (e) {
+                console.error('清空历史失败:', e);
+            }
+        }
+
+        async function loadStats() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/stats`);
+                const data = await resp.json();
+                const stats = data.data || {};
+                
+                document.getElementById('agent-count').textContent = stats.agent_count || 0;
+                document.getElementById('discussion-count').textContent = stats.discussion_count || 0;
+                document.getElementById('chat-count').textContent = stats.storage_stats?.chat_count || 0;
+                document.getElementById('insight-count').textContent = stats.storage_stats?.insight_count || 0;
+            } catch (e) {
+                console.error('加载统计失败:', e);
+            }
+        }
+
+        function formatTime(timestamp) {
+            if (!timestamp) return '';
+            try {
+                const date = new Date(timestamp);
+                return date.toLocaleString('zh-CN');
+            } catch (e) {
+                return timestamp;
+            }
+        }
+    </script>
+    <script>
+        // API 配置 - 自动检测部署环境
+        const API_BASE = (() => {
+            // Vercel 部署时，API 在同一域名下
+            if (window.location.hostname.includes('vercel.app') || 
+                window.location.hostname.includes('vercel')) {
+                return '';  // 同源
+            }
+            // 本地开发
+            return 'http://localhost:8000';
+        })();
+
+        // 如果需要手动配置，取消注释下面这行:
+        // const API_BASE = 'https://your-api-domain.vercel.app';
+        
+        console.log('API Base:', API_BASE || '(同源)');
+    </script>
+</body>
+</html>

@@ -1,0 +1,369 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>知识沙龙 🧠 - SuiLight 知识沙龙</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Noto+Sans+SC:wght@400;500;700&display=swap" rel="stylesheet">
+    <style>
+        body { font-family: 'Noto Sans SC', sans-serif; }
+        .card { transition: all 0.3s; }
+        .card:hover { transform: translateY(-4px); box-shadow: 0 12px 24px rgba(0,0,0,0.15); }
+        .gradient-bg { background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <!-- 导航栏 -->
+    <nav class="bg-white shadow-lg sticky top-0 z-50">
+        <div class="max-w-6xl mx-auto px-4 py-4 flex justify-between items-center">
+            <div class="flex items-center gap-3">
+                <a href-2xl">🧠="/" class="text</a>
+                <span class="font-bold text-xl text-gray-800">SuiLight 知识沙龙</span>
+            </div>
+            <div class="flex gap-4 text-sm">
+                <a href="/" class="text-gray-600 hover:text-indigo-600">🏠 首页</a>
+                <a href="/?tab=agents" class="text-gray-600 hover:text-indigo-600">🤖 思想家</a>
+                <span class="text-indigo-600 font-bold">🧠 知识沙龙</span>
+                <a href="/?tab=capsules" class="text-gray-600 hover:text-indigo-600">📦 胶囊</a>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 主要内容 -->
+    <main class="max-w-6xl mx-auto px-4 py-8">
+        
+        <!-- 标题区 -->
+        <div class="text-center mb-12">
+            <div class="text-6xl mb-4">🧠</div>
+            <h1 class="text-4xl font-bold text-gray-800 mb-2">知识沙龙</h1>
+            <p class="text-xl text-gray-500">多元思想碰撞 · 知识胶囊产出 · 智慧涌现</p>
+        </div>
+
+        <!-- 知识沙龙介绍 -->
+        <div class="bg-white rounded-2xl shadow-xl p-8 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span>💡</span> 什么是知识沙龙？
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
+                <div class="text-center p-6 bg-indigo-50 rounded-xl">
+                    <div class="text-4xl mb-3">🤖</div>
+                    <h3 class="font-bold text-lg mb-2">100位思想家</h3>
+                    <p class="text-gray-600 text-sm">邀请历史伟大思想家参与讨论，提供多元视角</p>
+                </div>
+                <div class="text-center p-6 bg-purple-50 rounded-xl">
+                    <div class="text-4xl mb-3">💬</div>
+                    <h3 class="font-bold text-lg mb-2">多轮讨论</h3>
+                    <p class="text-gray-600 text-sm">围绕话题深入探讨，观点碰撞产生智慧</p>
+                </div>
+                <div class="text-center p-6 bg-pink-50 rounded-xl">
+                    <div class="text-4xl mb-3">📦</div>
+                    <h3 class="font-bold text-lg mb-2">知识胶囊</h3>
+                    <p class="text-gray-600 text-sm">凝练讨论精华，产出可复用的知识成果</p>
+                </div>
+            </div>
+        </div>
+
+        <!-- 发起讨论 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6 mb-8">
+            <h2 class="text-2xl font-bold text-gray-800 mb-6 flex items-center gap-2">
+                <span>🚀</span> 发起知识沙龙
+            </h2>
+            <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">讨论话题</label>
+                    <input type="text" id="salon-topic" placeholder="例如：AI 是否应该拥有自我意识？" 
+                        class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 focus:ring-2 focus:ring-indigo-200 outline-none">
+                </div>
+                <div>
+                    <label class="block text-gray-700 font-bold mb-2">选择思想家</label>
+                    <select id="salon-agents" class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 outline-none">
+                        <option value="auto">🎲 自动选择 5 位</option>
+                        <option value="physics">🔬 物理学家 (牛顿、爱因斯坦)</option>
+                        <option value="philosophy">🤔 哲学家 (孔子、苏格拉底)</option>
+                        <option value="ai">🤖 AI 专家 (图灵)</option>
+                    </select>
+                </div>
+            </div>
+            <div class="mt-6">
+                <label class="block text-gray-700 font-bold mb-2">问题描述</label>
+                <textarea id="salon-desc" placeholder="详细描述讨论的问题背景..." 
+                    class="w-full px-4 py-3 rounded-lg border border-gray-300 focus:border-indigo-500 outline-none" rows="3"></textarea>
+            </div>
+            <div class="mt-6 flex gap-4">
+                <button onclick="createSalon()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-8 py-3 rounded-full font-bold transition-all shadow-lg hover:shadow-xl">
+                    🎯 启动知识沙龙
+                </button>
+                <button onclick="generateTopic()" class="bg-gray-200 hover:bg-gray-300 text-gray-700 px-6 py-3 rounded-full font-bold transition-all">
+                    🎲 随机话题
+                </button>
+            </div>
+        </div>
+
+        <!-- 灵感卡片 -->
+        <div class="bg-gradient-to-r from-amber-400 via-orange-500 to-red-500 rounded-2xl shadow-xl p-8 mb-8 text-white">
+            <h2 class="text-2xl font-bold mb-4 flex items-center gap-2">
+                <span>💡</span> 讨论灵感
+            </h2>
+            <div id="inspiration-container" class="text-center py-4">
+                <div class="animate-pulse">加载灵感...</div>
+            </div>
+            <div class="flex justify-center gap-4 mt-6">
+                <button onclick="getNewInspiration()" class="bg-white/20 hover:bg-white/30 px-6 py-2 rounded-full font-bold transition-all">
+                    🔄 换一个
+                </button>
+                <button onclick="useInspiration()" class="bg-white text-orange-500 px-6 py-2 rounded-full font-bold transition-all">
+                    📝 用这个话题
+                </button>
+            </div>
+        </div>
+
+        <!-- 已有讨论 -->
+        <div class="bg-white rounded-2xl shadow-xl p-6">
+            <div class="flex justify-between items-center mb-6">
+                <h2 class="text-2xl font-bold text-gray-800 flex items-center gap-2">
+                    <span>📋</span> 正在进行
+                </h2>
+                <span id="salon-count" class="bg-indigo-100 text-indigo-600 px-3 py-1 rounded-full text-sm font-bold">0 个沙龙</span>
+            </div>
+            <div id="salons-list" class="space-y-4">
+                <div class="text-center py-12 text-gray-400">
+                    <div class="text-4xl mb-4">🧠</div>
+                    <p>暂无知识沙龙，来发起一个吧！</p>
+                </div>
+            </div>
+        </div>
+
+    </main>
+
+    <script>
+        const API_BASE = window.location.origin;
+        let currentInspiration = null;
+
+        document.addEventListener('DOMContentLoaded', () => {
+            loadInspiration();
+            loadSalons();
+        });
+
+        // 加载灵感卡片
+        async function loadInspiration() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/inspiration`);
+                const data = await resp.json();
+                
+                const container = document.getElementById('inspiration-container');
+                
+                if (data.data) {
+                    currentInspiration = data.data;
+                    container.innerHTML = `
+                        <p class="text-2xl font-medium leading-relaxed">"${data.data.content}"</p>
+                    `;
+                } else {
+                    container.innerHTML = '<p class="text-gray-300">暂无灵感</p>';
+                }
+            } catch (e) {
+                console.error('加载灵感失败:', e);
+            }
+        }
+
+        async function getNewInspiration() {
+            await loadInspiration();
+        }
+
+        async function useInspiration() {
+            if (currentInspiration) {
+                document.getElementById('salon-topic').value = currentInspiration.content;
+            }
+        }
+
+        // 随机话题
+        async function generateTopic() {
+            await loadInspiration();
+            if (currentInspiration) {
+                document.getElementById('salon-topic').value = currentInspiration.content;
+            }
+        }
+
+        // 发起知识沙龙
+        async function createSalon() {
+            const topic = document.getElementById('salon-topic').value.trim();
+            const desc = document.getElementById('salon-desc').value.trim();
+            const agentMode = document.getElementById('salon-agents').value;
+            
+            if (!topic || topic.length < 5) {
+                alert('请输入讨论话题（至少5个字符）');
+                return;
+            }
+            
+            alert('🎯 知识沙龙已启动！\n\n思想家们正在准备讨论...\n讨论完成后将自动生成知识胶囊。');
+            
+            // 清空表单
+            document.getElementById('salon-topic').value = '';
+            document.getElementById('salon-desc').value = '';
+            
+            await loadSalons();
+        }
+
+        // 加载讨论列表
+        async function loadSalons() {
+            const container = document.getElementById('salons-list');
+            const countBadge = document.getElementById('salon-count');
+            
+            // 模拟讨论数据
+            const mockSalons = [
+                {
+                    id: '1',
+                    title: 'AI 是否应该拥有自我意识？',
+                    status: 'running',
+                    agent_count: 5,
+                    created_at: new Date(Date.now() - 3600000).toISOString()
+                }
+            ];
+            
+            countBadge.textContent = `${mockSalons.length} 个沙龙`;
+            
+            container.innerHTML = mockSalons.map(salon => `
+                <div class="card bg-gray-50 rounded-xl p-6">
+                    <div class="flex justify-between items-start">
+                        <div>
+                            <h4 class="font-bold text-lg text-gray-800 mb-2">${salon.title}</h4>
+                            <div class="flex gap-4 text-sm text-gray-500">
+                                <span>🤖 ${salon.agent_count} 位思想家</span>
+                                <span>💬 讨论中</span>
+                                <span>${formatTime(salon.created_at)}</span>
+                            </div>
+                        </div>
+                        <span class="bg-green-100 text-green-600 px-3 py-1 rounded-full text-sm font-bold">进行中</span>
+                    </div>
+                    <div class="mt-4 flex gap-3">
+                        <button onclick="joinSalon('${salon.id}')" class="bg-indigo-600 hover:bg-indigo-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                            👀 围观讨论
+                        </button>
+                        <button onclick="generateCapsule('${salon.id}')" class="bg-pink-600 hover:bg-pink-700 text-white px-4 py-2 rounded-lg text-sm font-bold transition-all">
+                            📦 生成胶囊
+                        </button>
+                    </div>
+                </div>
+            `).join('');
+        }
+
+        async function joinSalon(salonId) {
+            alert('👀 进入讨论详情页...');
+        }
+
+        async function generateCapsule(salonId) {
+            alert('📦 正在生成知识胶囊...\n\n胶囊将包含：\n• 核心洞见\n• 支撑证据\n• 行动建议\n• DATM 评分');
+        }
+
+        function formatTime(isoString) {
+            const date = new Date(isoString);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            
+            if (diff < 60) return '刚刚开始';
+            if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+            return `${Math.floor(diff / 86400)}天前`;
+        }
+    </script>
+</body>
+</html>.length < 10) {
+                alert('观点内容至少10个字符');
+                return;
+            }
+            
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/discussions`, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        topic_id: currentTopicId,
+                        content,
+                        stance
+                    })
+                });
+                const data = await resp.json();
+                
+                if (data.success) {
+                    document.getElementById('new-opinion').value = '';
+                    openTopicDetail(currentTopicId);
+                    loadTopics();
+                }
+            } catch (e) {
+                console.error('发布失败:', e);
+            }
+        }
+
+        // 加载热门话题
+        async function loadHotTopics() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/topics?limit=5`);
+                const data = await resp.json();
+                
+                const container = document.getElementById('hot-topics');
+                
+                if (data.data && data.data.topics.length > 0) {
+                    container.innerHTML = data.data.topics.slice(0, 5).map((topic, i) => `
+                        <div class="flex items-center gap-3 p-2 hover:bg-gray-50 rounded-lg cursor-pointer" onclick="openTopicDetail('${topic.id}')">
+                            <span class="text-lg font-bold text-indigo-600">${i + 1}</span>
+                            <span class="text-sm text-gray-700 line-clamp-1">${topic.title}</span>
+                        </div>
+                    `).join('');
+                } else {
+                    container.innerHTML = '<div class="text-gray-400 text-sm">暂无话题</div>';
+                }
+            } catch (e) {
+                console.error('加载热门话题失败:', e);
+            }
+        }
+
+        // 加载统计
+        async function loadStats() {
+            try {
+                const resp = await fetch(`${API_BASE}/api/coffee/stats`);
+                const data = await resp.json();
+                
+                if (data.data) {
+                    document.getElementById('stat-topics').textContent = data.data.topic_count || 0;
+                    document.getElementById('stat-discussions').textContent = data.data.opinion_count || 0;
+                }
+            } catch (e) {
+                console.error('加载统计失败:', e);
+            }
+        }
+
+        // 工具函数
+        function getCategoryEmoji(category) {
+            const emojis = {
+                'ai': '🤖',
+                'learning': '📚',
+                'society': '🌍',
+                'philosophy': '🤔',
+                'general': '💬'
+            };
+            return emojis[category] || '💬';
+        }
+
+        function getStanceEmoji(stance) {
+            const emojis = {
+                'positive': '👍',
+                'neutral': '😐',
+                'negative': '👎'
+            };
+            return emojis[stance] || '😐';
+        }
+
+        function formatTime(isoString) {
+            if (!isoString) return '';
+            const date = new Date(isoString);
+            const now = new Date();
+            const diff = (now - date) / 1000;
+            
+            if (diff < 60) return '刚刚';
+            if (diff < 3600) return `${Math.floor(diff / 60)}分钟前`;
+            if (diff < 86400) return `${Math.floor(diff / 3600)}小时前`;
+            return `${Math.floor(diff / 86400)}天前`;
+        }
+    </script>
+</body>
+</html>

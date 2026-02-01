@@ -1,0 +1,201 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>分享知识胶囊 🔗</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        .gradient-bg { background: linear-gradient(135deg, #667eea 0%, #764ba2 100%); }
+    </style>
+</head>
+<body class="gradient-bg min-h-screen">
+    <div class="max-w-2xl mx-auto px-4 py-8">
+        <!-- 返回链接 -->
+        <div class="text-center mb-8">
+            <a href="/" class="text-white/80 hover:text-white text-sm">← 返回 SuiLight 知识沙龙</a>
+        </div>
+
+        <!-- 分享卡片 -->
+        <div class="bg-white rounded-2xl shadow-2xl p-8">
+            <div class="text-center mb-8">
+                <div class="text-5xl mb-4">📦</div>
+                <h1 class="text-2xl font-bold text-gray-800" id="capsule-title">知识胶囊</h1>
+                <p class="text-gray-500 mt-2" id="capsule-desc">加载中...</p>
+            </div>
+
+            <!-- 核心洞见 -->
+            <div class="bg-indigo-50 rounded-xl p-6 mb-6">
+                <h3 class="font-bold text-indigo-800 mb-2">💡 核心洞见</h3>
+                <p class="text-gray-700" id="capsule-insight">加载中...</p>
+            </div>
+
+            <!-- 支撑证据 -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 mb-2">📚 支撑证据</h3>
+                <ul class="list-disc list-inside text-gray-600 space-y-1" id="capsule-evidence">
+                </ul>
+            </div>
+
+            <!-- 行动建议 -->
+            <div class="mb-6">
+                <h3 class="font-bold text-gray-700 mb-2">🎯 行动建议</h3>
+                <ul class="list-decimal list-inside text-gray-600 space-y-1" id="capsule-actions">
+                </ul>
+            </div>
+
+            <!-- DATM 评分 -->
+            <div class="bg-gradient-to-r from-pink-50 to-purple-50 rounded-xl p-6 mb-6">
+                <h3 class="font-bold text-gray-700 mb-4 text-center">📊 DATM 评价</h3>
+                <div class="grid grid-cols-2 md:grid-cols-4 gap-4">
+                    <div class="text-center">
+                        <div class="text-2xl">🔬</div>
+                        <div class="text-sm text-gray-500">Truth</div>
+                        <div class="text-xl font-bold text-blue-600" id="score-truth">0</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl">⚖️</div>
+                        <div class="text-sm text-gray-500">Goodness</div>
+                        <div class="text-xl font-bold text-green-600" id="score-goodness">0</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl">🎨</div>
+                        <div class="text-sm text-gray-500">Beauty</div>
+                        <div class="text-xl font-bold text-pink-600" id="score-beauty">0</div>
+                    </div>
+                    <div class="text-center">
+                        <div class="text-2xl">💡</div>
+                        <div class="text-sm text-gray-500">Intelligence</div>
+                        <div class="text-xl font-bold text-purple-600" id="score-intelligence">0</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 分享按钮 -->
+            <div class="flex flex-wrap gap-3 justify-center">
+                <button onclick="copyLink()" class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-full font-bold transition-all">
+                    📋 复制链接
+                </button>
+                <button onclick="showEmbed()" class="bg-gray-600 hover:bg-gray-700 text-white px-6 py-3 rounded-full font-bold transition-all">
+                    🔗 嵌入代码
+                </button>
+                <button onclick="exportHTML()" class="bg-green-600 hover:bg-green-700 text-white px-6 py-3 rounded-full font-bold transition-all">
+                    💾 导出 HTML
+                </button>
+            </div>
+
+            <!-- 嵌入代码弹窗 -->
+            <div id="embed-modal" class="hidden fixed inset-0 bg-black/50 items-center justify-center z-50">
+                <div class="bg-white rounded-2xl p-8 max-w-lg w-full mx-4">
+                    <h3 class="text-xl font-bold mb-4">嵌入代码</h3>
+                    <textarea id="embed-code" class="w-full h-32 px-4 py-2 border rounded-lg font-mono text-sm mb-4" readonly></textarea>
+                    <div class="flex justify-end gap-3">
+                        <button onclick="closeEmbedModal()" class="px-4 py-2 text-gray-600">关闭</button>
+                        <button onclick="copyEmbed()" class="bg-indigo-600 text-white px-4 py-2 rounded-lg">复制</button>
+                    </div>
+                </div>
+            </div>
+
+            <!-- 底部 -->
+            <div class="text-center mt-8 pt-6 border-t text-gray-400 text-sm">
+                <p>🔗 来自 <a href="/" class="text-indigo-600">SuiLight 知识沙龙</a></p>
+            </div>
+        </div>
+
+        <!-- 统计 -->
+        <div class="text-center mt-6 text-white/80 text-sm">
+            <p id="view-count">0 次浏览</p>
+        </div>
+    </div>
+
+    <script>
+        // 获取 URL 参数
+        const urlParams = new URLSearchParams(window.location.search);
+        const capsuleId = urlParams.get('id') || 'demo';
+
+        // 加载胶囊数据
+        async function loadCapsule() {
+            // 模拟数据
+            const demoData = {
+                title: "关于「AI意识」的胶囊",
+                insight: "意识可能有多重形态，机器意识 ≠ 人类意识。功能性等价不等于本质相同。",
+                evidence: [
+                    "物理学视角: 意识是复杂系统的涌现现象",
+                    "心理学视角: 需要潜意识才能产生真正意识",
+                    "哲学视角: 道德感是意识的试金石"
+                ],
+                action_items: [
+                    "继续观察AI发展",
+                    "研究意识本质",
+                    "建立伦理框架"
+                ],
+                dimensions: {
+                    truth: 70,
+                    goodness: 65,
+                    beauty: 60,
+                    intelligence: 80
+                }
+            };
+
+            const data = demoData;
+
+            // 更新 UI
+            document.getElementById('capsule-title').textContent = data.title;
+            document.getElementById('capsule-insight').textContent = data.insight;
+
+            // 证据列表
+            document.getElementById('capsule-evidence').innerHTML = data.evidence
+                .map(e => `<li>${e}</li>`).join('');
+
+            // 行动列表
+            document.getElementById('capsule-actions').innerHTML = data.action_items
+                .map(a => `<li>${a}</li>`).join('');
+
+            // 评分
+            document.getElementById('score-truth').textContent = data.dimensions.truth;
+            document.getElementById('score-goodness').textContent = data.dimensions.goodness;
+            document.getElementById('score-beauty').textContent = data.dimensions.beauty;
+            document.getElementById('score-intelligence').textContent = data.dimensions.intelligence;
+
+            // 统计
+            document.getElementById('view-count').textContent = Math.floor(Math.random() * 100) + ' 次浏览';
+        }
+
+        function copyLink() {
+            navigator.clipboard.writeText(window.location.href);
+            alert('链接已复制！');
+        }
+
+        function showEmbed() {
+            const embedCode = `<iframe src="${window.location.href}&embed=true" width="400" height="600" frameborder="0" allowfullscreen></iframe>`;
+            document.getElementById('embed-code').value = embedCode;
+            document.getElementById('embed-modal').classList.remove('hidden');
+            document.getElementById('embed-modal').classList.add('flex');
+        }
+
+        function closeEmbedModal() {
+            document.getElementById('embed-modal').classList.add('hidden');
+            document.getElementById('embed-modal').classList.remove('flex');
+        }
+
+        function copyEmbed() {
+            const code = document.getElementById('embed-code').value;
+            navigator.clipboard.writeText(code);
+            alert('嵌入代码已复制！');
+        }
+
+        function exportHTML() {
+            const html = document.documentElement.outerHTML;
+            const blob = new Blob([html], { type: 'text/html' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = 'capsule.html';
+            a.click();
+            URL.revokeObjectURL(url);
+        }
+
+        loadCapsule();
+    </script>
+</body>
+</html>
